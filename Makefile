@@ -4,10 +4,10 @@ install:
 	uv sync
 
 run:
-	un run python -m src
+	uv run python -m src config.json
 
 debug:
-	ub run python -m pdb -m src
+	uv run python -m pdb -m src
 
 clean:
 	rm -rf __pycache__
@@ -19,9 +19,9 @@ fclean:
 	rm -rf .venv
 
 lint:
-	uv run flake8 --warn-return-any --warnunused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
-	uv run mypy		// a compélter
+	uv run flake8 src/
+	uv run mypy src/ --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
-	uv run flake8 	// a compléter
+	uv run flake8 	src/
 	uv run mypy	  src/ --strict

@@ -4,7 +4,14 @@ import sys
 
 
 def main():
-	...
+	if len(sys.argv) < 2:
+		print("Error usage: python3 pac-man.py config.json", file=sys.stderr)
+		exit(1)
+
+	config_path = sys.argv[1]
+	config_data = load_json(config_path)
+	print("Config load successfully.", config_data) #Pour vérifier si tout fonctionne
+
 
 def load_json(filepath: str) -> Any:
 	try:
