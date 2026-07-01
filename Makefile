@@ -4,7 +4,7 @@ install:
 	uv sync
 
 run:
-	uv run python -m src config.json
+	UV_SKIP_WHEEL_FILENAME_CHECK=1 uv run python -m src config.json
 
 debug:
 	uv run python -m pdb -m src

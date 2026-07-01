@@ -1,0 +1,3 @@
+class GameSetting:
+	def __init__(self)#quel structure?):
+		...
