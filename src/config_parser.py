@@ -6,7 +6,7 @@ class LevelConfig(BaseModel):
 	height: int = Field(default= 10, gt= 9)
 
 class GameConfig(BaseModel):
-	highscore_filename: str = "jsp"
+	highscore_filename: str = "hightscore.json"
 	level: list[LevelConfig]
 	lives: int = Field(default= 1, gt= 0)
 	pacgum: int = Field(default= 1, gt= 0)
@@ -15,7 +15,3 @@ class GameConfig(BaseModel):
 	points_per_ghost: int = Field(default= 1, gt= 0)
 	seed: int = Field(default= 42)
 	level_max_time: int = Field(default= 90, gt= 1)
-
-
-
-

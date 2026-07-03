@@ -9,17 +9,25 @@ def main():
 		print("Error usage: python3 pac-man.py config.json", file=sys.stderr)
 		exit(1)
 
-	maze_gen = MazeGenerator()
-	maze_grid = maze_gen.maze
-	shortest_path = maze_gen.shortest_path
-
-	print(f"Maze dimensions: {len(maze_grid[0])}x{len(maze_grid)}")
-	print(f"Entry: {maze_gen.maze_entry}, Exit: {maze_gen.maze_exit}")
-	print(f"Shortest path length: {len(shortest_path)}")
-
+	
 	config_path = sys.argv[1]
+	# Ici j'ai toutes les informations qui viennent du config json
 	config_data = load_json(config_path)
-	print("Config load successfully.", config_data)
+
+	#Isoler les données pour width, height et seed
+	width = config_data['level'][0]['width']
+	height = config_data['level'][0]['height']
+	seed = config_data['seed']
+
+	print(f"width: {width}")
+	print(f"height: {height}")
+	print(f"seed: {seed}")
+
+	# Tuple pour MazeGenerator()
+	size = (width, height, seed)
+
+
+	# print("Config load successfully.", config_data)
 
 
 def load_json(filepath: str) -> Any:
@@ -52,6 +60,16 @@ if __name__ == "__main__":
 	# 	main()
 	# except Exception as error:
 	# 	print("Error usage : python3 pac-man.py config.json")
+
+
+
+
+
+
+
+
+
+
 
 
 # 		 Voir pour level [], sachant que:
