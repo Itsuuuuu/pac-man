@@ -2,6 +2,8 @@ from typing import Any
 import json
 import sys
 from mazegenerator import MazeGenerator
+from src.config_parser import GameConfig
+from src.game_setting import GameSetting
 
 
 def main():
@@ -14,18 +16,62 @@ def main():
 	# Ici j'ai toutes les informations qui viennent du config json
 	config_data = load_json(config_path)
 
+	# les ** servent pour unpacking + Validation Pydantic
+	config = GameConfig(**config_data)
+
 	#Isoler les données pour width, height et seed
 	width = config_data['level'][0]['width']
 	height = config_data['level'][0]['height']
 	seed = config_data['seed']
 
+	# Tuple pour MazeGenerator()
+	size = (width, height)
+
+	maze_gen = MazeGenerator(size=size, seed=config.seed)
+
+	game = GameSetting(
+		config = config,
+		maze_grid = maze_gen.maze,
+		entry = maze_gen.maze_entry,
+		exit = maze_gen.maze_exit,
+		shortest_path = maze_gen.shortest_path
+	)
+
+	print(f"Game initialisé avec succès ! Taille : {game.width}x{game.height}, Vies : {game.current_lives}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
 	print(f"width: {width}")
 	print(f"height: {height}")
 	print(f"seed: {seed}")
 
-	# Tuple pour MazeGenerator()
-	size = (width, height, seed)
 
+
+	
+
+	maze = maze_gen.maze
+	maze_entry = maze_gen.maze_entry
+	maze_exit = maze_gen.maze_exit
+	maze_path = maze_gen.shortest_path
+
+	print(f"maze: {maze}")
+	print(f"maze_entry: {maze_entry}")
+	print(f"maze_exit: {maze_exit}")
+	print(f"maze_path: {maze_path}")
 
 	# print("Config load successfully.", config_data)
 
