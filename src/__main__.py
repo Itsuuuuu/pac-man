@@ -9,43 +9,28 @@ def main():
 		print("Error usage: python3 pac-man.py config.json", file=sys.stderr)
 		exit(1)
 
+	maze_gen = MazeGenerator()
+	maze_grid = maze_gen.maze
+	shortest_path = maze_gen.shortest_path
 
+	print(f"Maze dimensions: {len(maze_grid[0])}x{len(maze_grid)}")
+	print(f"Entry: {maze_gen.maze_entry}, Exit: {maze_gen.maze_exit}")
+	print(f"Shortest path length: {len(shortest_path)}")
 
-
-	print(dir(mazegenerator))
-	# print()
-	generator = mazegenerator.MazeGenerator()
-	
-	# 1. On lance la génération du labyrinthe
-	generator.generate()
-	
-	# 2. On récupère la map stockée dans l'attribut prévu à cet effet
-	ma_map = generator.maze  # Si 'maze' est vide, on testera generator._maze
-	
-	print("--- Infos Labyrinthe ---")
-	print(f"Type de l'attribut maze : {type(ma_map)}")
-	
-	# 3. Si c'est bien une matrice (liste de listes) ou une liste de chaînes, on mesure :
-	if hasattr(ma_map, '__len__') and len(ma_map) > 0:
-		print(f"Hauteur (lignes) : {len(ma_map)}")
-		print(f"Largeur (colonnes) : {len(ma_map[0])}")
-		print("\nAperçu des 3 premières lignes :")
-		for ligne in ma_map[:3]:
-			print(ligne)
-	else:
-		# Si 'maze' n'est pas directement mesurable, on regarde les attributs de dimension
-		print(f"Largeur via _width : {generator._width}")
-		print(f"Hauteur via _height : {generator._height}")
-
-	# config_path = sys.argv[1]
-	# config_data = load_json(config_path)
-	# print("Config load successfully.", config_data) #Pour vérifier si tout fonctionne
+	config_path = sys.argv[1]
+	config_data = load_json(config_path)
+	print("Config load successfully.", config_data)
 
 
 def load_json(filepath: str) -> Any:
 	try:
 		with open(filepath, 'r' ) as file:
 			return json.load(file)
+		for line in file:
+			line = line.strip()
+			if not line or line.startswith('#'):
+				continue
+
 	except FileNotFoundError:
 		print(f"Error: {filepath} not found", file=sys.stderr)
 		sys.exit(1)
@@ -62,7 +47,27 @@ def load_json(filepath: str) -> Any:
 
 
 if __name__ == "__main__":
-	try:
-		main()
-	except Exception as error:
-		print("Error usage : python3 pac-man.py config.json")
+	main()
+	# try:
+	# 	main()
+	# except Exception as error:
+	# 	print("Error usage : python3 pac-man.py config.json")
+
+
+# 		 Voir pour level [], sachant que:
+#  				Create a simple 20x20 maze
+# 						maze_gen = MazeGenerator(width=20, height=20)
+
+# 				# Get the maze structure
+#  						maze_grid = maze_gen.maze
+#  						shortest_path = maze_gen.shortest_path
+
+#  						print(f"Maze dimensions: {len(maze_grid[0])}x{len(maze_grid)}")
+#  						print(f"Entry: {maze_gen.maze_entry}, Exit: {maze_gen.maze_exit}")
+#  						print(f"Shortest path length: {len(shortest_path)}")
+# 
+# 
+# 			 #### Constructor
+# 
+# 						```python
+# 						MazeGenerator(size=(20,20), entry_cell=(0,0), exit_cell=(0,0), perfect=False, seed=0)
