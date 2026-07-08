@@ -9,10 +9,9 @@ class Color(Enum):
 	ORANGE = "orange"
 
 class Pacman:
-	def __init__(self, x: int, y: int, current_zone: Tile, invinsible: bool = False):
+	def __init__(self, x: int, y: int, invinsible: bool = False):
 		self.x = x
 		self.y = y
-		self.current_zone = current_zone
 		self.invinsible = invinsible
 
 	# Pour faire avancer le pacman sur la prochaine case
@@ -24,8 +23,8 @@ class Pacman:
 		...
 	
 	#Si le Pacman passe sur un super pacgum, on passe is_invinsible en true pour quelques secondes
-	def is_invisible(self):
-		...
+	def is_invinsible(self):
+		return True
 
 
 class Ghost:

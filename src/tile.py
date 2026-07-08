@@ -5,8 +5,13 @@ class TileType(Enum):
 	AUTORISED_CASE = "autorised_case"
 	RESERVED_CASE = "reserved_case"
 
+class Pacgum(Enum):
+	PACGUM = "pacgum"
+	SUPERPACGUM = "superpacgum"
+	NOTHING = "nothing"	
+
 class Tile:
-	def __init__(self,  x: int, y: int, zone_type: TileType = TileType.AUTORISED_CASE):
+	def __init__(self,  x: int, y: int, zone_type: TileType = TileType.AUTORISED_CASE, content: Pacgum = Pacgum):
 		self.zone_type = zone_type
 		self.x = x
 		self.y = y
