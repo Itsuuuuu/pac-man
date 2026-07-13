@@ -1,4 +1,4 @@
-from tile import TileType, Tile
+from src.tile import TileType, Tile
 from enum import Enum
 
 
@@ -24,6 +24,7 @@ class Pacman:
 	
 	#Si le Pacman passe sur un super pacgum, on passe is_invinsible en true pour quelques secondes
 	def is_invinsible(self):
+		#mettre un timer 
 		return True
 
 

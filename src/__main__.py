@@ -24,17 +24,29 @@ def main():
 	height = config_data['level'][0]['height']
 	seed = config_data['seed']
 
+	# Récupérer les autres données
+	lives = config_data['lives']
+	is_finished = config_data.get('is_finished', False)
+	pacgum = config_data['pacgum']
+	current_score = config_data.get('current_score', 0)
+
+
 	# Tuple pour MazeGenerator()
 	size = (width, height)
 
+	# La map se créer
 	maze_gen = MazeGenerator(size=size, seed=config.seed)
 
 	game = GameSetting(
 		config = config,
+		width = width,
+		height = height,
+		seed = seed,
+		lives = lives,
 		maze_grid = maze_gen.maze,
-		entry = maze_gen.maze_entry,
-		exit = maze_gen.maze_exit,
-		shortest_path = maze_gen.shortest_path
+		pacgum = pacgum,
+		is_finished = is_finished,
+		current_score = current_score, 
 	)
 
 	print(f"Game initialisé avec succès ! Taille : {game.width}x{game.height}, Vies : {game.current_lives}")
