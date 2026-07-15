@@ -16,9 +16,10 @@ class Tile:
 		self.y = y
 		self.zone_type = zone_type
 		self.content = content
+		self.walls = walls_value
 
 		self.wall_north = bool(walls_value & 1)
-		self.wall_eath = bool(walls_value & 2)
+		self.wall_east = bool(walls_value & 2)
 		self.wall_south = bool(walls_value & 4)
 		self.wall_west = bool(walls_value & 8)
 	

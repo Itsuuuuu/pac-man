@@ -22,7 +22,7 @@ class GameSetting:
 		self.tile_map = []
 
 		#Construction de la map
-		# self.build_map(maze_grid)
+		self.build_map(maze_grid)
 		
 		# Récupérer les cases
 		self.spawn_entities()
@@ -32,9 +32,9 @@ class GameSetting:
 		self.tile_map = []
 
 		# Parcours de la matrice
+		available_coords = []
 		for y, row in enumerate(maze_grid):
 			tile_row = []
-			available_coords = []
 
 			random.seed(self.seed)
 			for x, tile in enumerate(row):
@@ -47,7 +47,7 @@ class GameSetting:
 					available_coords.append((x,y))
 
 				tile = Tile(x=x, y=y, walls_value=tile, zone_type=zone, content=gum)
-				tile_row.append(tile_row)
+				tile_row.append(tile)
 			self.tile_map.append(tile_row)
 
 		corners = [
@@ -61,9 +61,9 @@ class GameSetting:
 			if corner in available_coords:
 				available_coords.remove(corner)
 			corner_x, corner_y = corner
-			self.tile_map[corner_y, corner_x].content = Pacgum.SUPERPACGUM
+			self.tile_map[corner_y][corner_x].content = Pacgum.SUPERPACGUM
 
-		choosen_coords = random.sample(available_coords, self.pacgum)
+		choosen_coords = random.sample(available_coords, self.config.pacgum)
 		for x, y in choosen_coords:
 			self.tile_map[y][x].content = Pacgum.PACGUM
 			self.pacgum +=1
@@ -93,7 +93,7 @@ class GameSetting:
 
 			# Pour supprimer les pacgums sur les cases spawn
 			if self.tile_map[spawn_y][spawn_x].content == Pacgum.PACGUM:
-				self.tile_map[spawn_y[spawn_x]].content = Pacgum.NOTHING
+				self.tile_map[spawn_y][spawn_x].content = Pacgum.NOTHING
 				self.pacgum -= 1
 
 			# Créer et ajouter le fantomes
@@ -110,15 +110,3 @@ class GameSetting:
 			self.pacgum -= 1
 		
 		self.pacman = Pacman(x=center_x, y=center_y)
-
-
-
-
-
-
-
-
-
-
-
-
