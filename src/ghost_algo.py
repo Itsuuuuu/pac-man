@@ -109,23 +109,22 @@ def wall_from_tiles(tile_map: list) -> HasWall:
 	return lambda x, y, d: tile_map[y][x].has_wall(d)
 
 
-if __name__ == "__main__":
-	from mazegenerator import MazeGenerator
-
-	width, height = 20, 20
-	mg = MazeGenerator(size=(width, height), seed=42)
-	has_wall = wall_from_grid(mg.maze)
-
-	ghost: Coord = (0, 0)
-	pacman: Coord = (width - 1, height - 1)
-
-	step = bfs_next_step(has_wall, width, height, ghost, pacman)
-	path = bfs_path(has_wall, width, height, ghost, pacman)
-
-	print(f"Fantome  : {ghost}")
-	print(f"Pacman   : {pacman}")
-	print(f"Prochaine case du fantome : {step}")
-	if path is None:
-		print("Chemin   : aucun (pacman inatteignable)")
-	else:
-		print(f"Chemin   : {len(path)} cases -> {path}")
+#if __name__ == "__main__":
+#	from mazegenerator import MazeGenerator
+#
+#	width, height = 20, 20
+#	mg = MazeGenerator(size=(width, height), seed=42)
+#	has_wall = wall_from_grid(mg.maze)
+#
+#	ghost: Coord = (0, 0)
+#	pacman: Coord = (width - 1, height - 1)
+#	step = bfs_next_step(has_wall, width, height, ghost, pacman)
+#	path = bfs_path(has_wall, width, height, ghost, pacman)
+#
+#	print(f"Fantome  : {ghost}")
+#	print(f"Pacman   : {pacman}")
+#	print(f"Prochaine case du fantome : {step}")
+#	if path is None:
+#		print("Chemin   : aucun (pacman inatteignable)")
+#	else:
+#		print(f"Chemin   : {len(path)} cases -> {path}")
