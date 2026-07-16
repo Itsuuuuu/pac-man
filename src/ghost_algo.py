@@ -10,7 +10,7 @@ DELTAS = {
 }
 
 Coord = tuple[int, int]
-HasWall = callable[[int, int, int], bool]
+HasWall = Callable[[int, int, int], bool]
 
 def bfs_next_step(
 	has_wall: HasWall,

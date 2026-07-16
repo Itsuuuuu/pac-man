@@ -27,7 +27,7 @@ class GameSetting:
 		# Récupérer les cases
 		self.spawn_entities()
 
-	def build_map(self, maze_grid: list[list[int]]):
+	def build_map(self, maze_grid: list[list[int, int]]):
 		# list vide pour être remplie de list
 		self.tile_map = []
 
@@ -67,6 +67,7 @@ class GameSetting:
 		for x, y in choosen_coords:
 			self.tile_map[y][x].content = Pacgum.PACGUM
 			self.pacgum +=1
+		return (self.tile_map)
 		
 	
 	def spawn_entities(self):
@@ -110,3 +111,18 @@ class GameSetting:
 			self.pacgum -= 1
 		
 		self.pacman = Pacman(x=center_x, y=center_y)
+
+	def update(self, direc_x: int, direc_y: int):
+		self.pacman.move_to_next(direc_x, direc_y, self.tile_map)
+		blinky = None
+
+		# Trouver Blinky
+		for ghost in self.ghosts:
+			if ghost.color == Color.RED:
+				blinky = ghost
+
+		# Déplacer les ghosts
+		for ghost in self.ghosts:
+			ghost.move(self.tile_map, self.width, self.height, self.pacman, blinky)
+
+

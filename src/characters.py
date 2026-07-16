@@ -43,7 +43,7 @@ class Pacman:
 		self.y = self.spawn_y
 		self.direction(0, 0)
 	
-	#Si le Pacman passe sur un super pacgum, on passe is_invinsible en true pour quelques secondes
+	# Si le Pacman passe sur un super pacgum, on passe is_invinsible en true pour quelques secondes
 	def is_invinsible(self):
 		#mettre un timer 
 		return self.invinsible
@@ -59,7 +59,7 @@ class Ghost:
 		self.color = color
 		self.is_dead = False
 
-	#Doit devenir des petits yeux, et bfs vers la case de son spawn
+	# Doit devenir des petits yeux, et bfs vers la case de son spawn
 	def back_to_spawn(self):
 		self.is_dead = True
 	
@@ -124,5 +124,3 @@ class Ghost:
 			self.x, self.y = next_step
 		if self.is_dead and (self.x, self.y) == (self.spawn_x, self.spawn_y):
 			self.is_dead = False
-
-
