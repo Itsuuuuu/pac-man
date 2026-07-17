@@ -5,7 +5,7 @@ from mazegenerator import MazeGenerator
 from src.config_parser import GameConfig
 from src.game_setting import GameSetting
 import time
-
+import pygame
 
 
 def load_json(filepath: str) -> Any:
@@ -33,7 +33,6 @@ def main():
 		print("Error usage: python3 pac-man.py config.json", file=sys.stderr)
 		exit(1)
 
-	
 	config_path = sys.argv[1]
 	# Ici j'ai toutes les informations qui viennent du config json
 	config_data = load_json(config_path)
@@ -70,8 +69,14 @@ def main():
 		current_score = current_score, 
 	)
 
+	pygame.init()
+	screen = pygame.display.set_mode((width * 20, height * 20))
+	pygame.display.set_caption("Pac-Man")
+	clock = pygame.time.Clock()
+	direc_x, direc_y = 0, 0
+
 	while not game.is_finished:
-		game.update(1, 0)
+		clock.tick(10)
 
 
 
