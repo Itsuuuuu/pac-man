@@ -12,8 +12,25 @@ title_font = pygame.font.Font("font_pacman/Pacfont-ZEBZ.ttf", 90)
 font = pygame.font.SysFont("Rockwell Nova", 50, bold=True)
 
 options = ["Start Game", "Options", "High Scores", "Cheat", "Exit"]
-selected_index = 0
+cheats = ["Invincibility", "Level skips", "Infinite lives", "Edible ghosts", "Point additions"]
+cheat_states = {
+    "Invincibility": False,
+    "Infinite lives": False,
+    "Edible ghosts": False,
+    }
 
+cheat_value = {
+    "Level skips": 0,
+    "Point additions": 0,
+}
+
+cheat_max = {
+    "Level skips": 42,
+    "Point additions": 9999,
+}
+
+menu_index = 0
+cheat_index = 0
 
 pygame.font.Font(None, 500)
 
@@ -53,7 +70,7 @@ def draw_pacman(screen, x, y, circle, mouth_angle=20):
     pygame.draw.polygon(screen, (0, 0, 0), [(x, y), point_top, point_bottom])
 
 
-def draw_menu(screen, selected_index):
+def draw_menu(screen, menu_index):
     title_surface = title_font.render("Pac-Man", True, (255, 255, 0))
     title_rect = title_surface.get_rect(center=(750, 100))
     screen.blit(title_surface, title_rect)
@@ -62,7 +79,7 @@ def draw_menu(screen, selected_index):
         text = font.render(option, True, (255, 0, 0))
         text_rect = text.get_rect(center=(750, 400 + i * 100))
         screen.blit(text, text_rect)
-        if i == selected_index:
+        if i == menu_index:
             circle = 15
             x = text_rect.left - 50
             y = text_rect.centery
@@ -79,6 +96,7 @@ def draw_options(screen):
     title = title_font.render("Options", True, (255, 255, 0))
     title_rect = title.get_rect(center=(750, 100))
     screen.blit(title, title_rect)
+
 
 def draw_highscores(screen):
     title = title_font.render("High Scores", True, (255, 255, 0))
@@ -123,36 +141,80 @@ def draw_highscores(screen):
 
 
 
-def draw_cheat(screen):
+def draw_cheat(screen, cheat_index):
     title = title_font.render("Cheat", True, (255, 255, 0))
     title_rect = title.get_rect(center=(750, 100))
     screen.blit(title, title_rect)
 
+    for i, cheat in enumerate(cheats):
+        if cheat in cheat_states:
+            status = "ON" if cheat_states[cheat] else "OFF"
+            color = (0, 255, 0) if cheat_states[cheat] else (255, 255, 255)
+            label = f"{cheat}: {status}"
+        else:
+            color = (255, 255, 255)
+            label = f"{cheat} : < {cheat_value[cheat]} >"
+        
+        text = font.render(label, True, color)
+        text_rect = text.get_rect(center=(750, 400 + i * 100))
+        screen.blit(text, text_rect)
 
-def handle_menu_events(event):
-    global selected_index, state, running
+        if i == cheat_index:
+            circle = 15
+            x = text_rect.left - 50
+            y = text_rect.centery
+            draw_pacman(screen, x, y, circle, mouth_angle=20)
+
+
+def handle_cheat_events(event):
+    global cheat_index, state, running
+
+    current_cheat = cheats[cheat_index]
+
 
     if event.key == pygame.K_UP:
-        if selected_index > 0:
-            selected_index -= 1
+        if cheat_index > 0:
+            cheat_index -= 1
     elif event.key == pygame.K_DOWN:
-        if selected_index != len(options) - 1:
-            selected_index += 1
+        if cheat_index != len(cheats) - 1:
+            cheat_index += 1
     elif event.key == pygame.K_RETURN:
-        if selected_index == 0:
+        if current_cheat in cheat_states:
+            cheat_states[current_cheat] = not cheat_states[current_cheat]
+    elif event.key == pygame.K_RIGHT:
+        if current_cheat in cheat_value:
+            if cheat_value[current_cheat] < cheat_max[current_cheat]:
+                cheat_value[current_cheat] += 1
+    elif event.key == pygame.K_LEFT:
+        if current_cheat in cheat_value:
+            if cheat_value[current_cheat] > 0:
+                cheat_value[current_cheat] -= 1
+
+
+        
+
+def handle_menu_events(event):
+    global menu_index, state, running
+
+    if event.key == pygame.K_UP:
+        if menu_index > 0:
+            menu_index -= 1
+    elif event.key == pygame.K_DOWN:
+        if menu_index != len(options) - 1:
+            menu_index += 1
+    elif event.key == pygame.K_RETURN:
+        if menu_index == 0:
             state = "game"
-        elif selected_index == 1:
+        elif menu_index == 1:
             state = "options"
-        elif selected_index == 2:
+        elif menu_index == 2:
             state = "highscores"
-        elif selected_index == 3:
+        elif menu_index == 3:
             state = "cheat"
-        elif selected_index == 4:
+        elif menu_index == 4:
             running = False
     elif event.key == pygame.K_ESCAPE:
         running = False
-
-
 
 while running:
     for event in pygame.event.get():
@@ -167,17 +229,20 @@ while running:
                     state = "menu"
             elif state == "menu":
                 handle_menu_events(event)
+            elif state == "cheat":
+                handle_cheat_events(event)
+
 
     screen.fill((0, 0, 0))
 
     if state == "menu":
-        draw_menu(screen, selected_index)
+        draw_menu(screen, menu_index)
     elif state == "highscores":
         draw_highscores(screen)
     elif state == "options":
         draw_options(screen)
     elif state == "cheat":
-        draw_cheat(screen)
+        draw_cheat(screen, cheat_index)
     elif state == "game":
         draw_game(screen)
 
