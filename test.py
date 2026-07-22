@@ -5,13 +5,17 @@ import json
 pygame.init()
 
 pygame.display.set_caption("Pac-Man")
-screen = pygame.display.set_mode((1500, 1000))
+screen_dimensions = [(2000, 1000), (2500, 1400), (1000, 1000)]
+dimension_index = 0
+height, width = screen_dimensions[dimension_index]
+screen = pygame.display.set_mode(screen_dimensions[dimension_index])
 
 title_font = pygame.font.Font("font_pacman/Pacfont-ZEBZ.ttf", 90)
 # start = pygame.font.SysFont("Rockwell Nova", 50, bold=True)
 font = pygame.font.SysFont("Rockwell Nova", 50, bold=True)
 
 options = ["Start Game", "Options", "High Scores", "Cheat", "Exit"]
+options_options = ["Volume", "Dimensions", "Colors", "Back"]
 cheats = ["Invincibility", "Level skips", "Infinite lives", "Edible ghosts", "Point additions"]
 cheat_states = {
     "Invincibility": False,
@@ -30,9 +34,8 @@ cheat_max = {
 }
 
 menu_index = 0
+options_index = 0
 cheat_index = 0
-
-pygame.font.Font(None, 500)
 
 running = True
 state = "menu"
@@ -72,12 +75,12 @@ def draw_pacman(screen, x, y, circle, mouth_angle=20):
 
 def draw_menu(screen, menu_index):
     title_surface = title_font.render("Pac-Man", True, (255, 255, 0))
-    title_rect = title_surface.get_rect(center=(750, 100))
+    title_rect = title_surface.get_rect(center=(height // 2, 100))  #
     screen.blit(title_surface, title_rect)
 
     for i, option in enumerate(options):
         text = font.render(option, True, (255, 0, 0))
-        text_rect = text.get_rect(center=(750, 400 + i * 100))
+        text_rect = text.get_rect(center=(height // 2, 300 + i * 100))  #
         screen.blit(text, text_rect)
         if i == menu_index:
             circle = 15
@@ -88,30 +91,46 @@ def draw_menu(screen, menu_index):
 
 def draw_game(screen):
     title = title_font.render("Game", True, (255, 255, 0))
-    title_rect = title.get_rect(center=(750, 100))
+    title_rect = title.get_rect(center=(height // 2, 100))  #
     screen.blit(title, title_rect)
 
 
-def draw_options(screen):
+def draw_options(screen, options_index):
+    global text
     title = title_font.render("Options", True, (255, 255, 0))
-    title_rect = title.get_rect(center=(750, 100))
+    title_rect = title.get_rect(center=(height // 2, 100))  
     screen.blit(title, title_rect)
+
+    for i in range(len(options_options)):
+        if i == 1:
+            largeur, hauteur = screen_dimensions[dimension_index]
+            texte = f"Dimensions : {largeur} x {hauteur}"
+        else:
+            texte = options_options[i]
+        text = font.render(texte, True, (255, 0, 0))
+        text_rect = text.get_rect(center=(height // 2, 300 + i * 100))
+        screen.blit(text, text_rect)
+        if i == options_index:
+            circle = 15
+            x = text_rect.left - 50
+            y = text_rect.centery
+            draw_pacman(screen, x, y, circle, mouth_angle=20)
 
 
 def draw_highscores(screen):
     title = title_font.render("High Scores", True, (255, 255, 0))
-    title_rect = title.get_rect(center=(750, 100))
+    title_rect = title.get_rect(center=(height // 2, 100))
     screen.blit(title, title_rect)
 
     header_y = 220
     rank_header = font.render("Rank", True, (250, 7, 7))
-    screen.blit(rank_header, rank_header.get_rect(center=(450, header_y)))
+    screen.blit(rank_header, rank_header.get_rect(center=(height // 4, header_y)))
 
-    score_header = font.render("Score", True, (250, 7, 7))
-    screen.blit(score_header, score_header.get_rect(center=(750, header_y)))
+    score_header = font.render("Name", True, (250, 7, 7))
+    screen.blit(score_header, score_header.get_rect(center=(height // 2, header_y)))
 
-    name_header = font.render("Name", True, (250, 7, 7))
-    screen.blit(name_header, name_header.get_rect(center=(1050, header_y)))
+    name_header = font.render("Score", True, (250, 7, 7))
+    screen.blit(name_header, name_header.get_rect(center=(height // 1.3, header_y)))
 
     row_colors = [
         (255, 111, 97), (0, 119, 182), (129, 217, 178), (147, 112, 219),
@@ -127,15 +146,15 @@ def draw_highscores(screen):
 
 
         rank_text = font.render(ordinal(i + 1), True, color)
-        rank_rect = rank_text.get_rect(center=(450, y))
+        rank_rect = rank_text.get_rect(center=(height // 4, y))
         screen.blit(rank_text, rank_rect)
 
         pseudo_text = font.render(pseudo, True, color)
-        pseudo_rect = pseudo_text.get_rect(center=(750, y))
+        pseudo_rect = pseudo_text.get_rect(center=(height // 2, y))
         screen.blit(pseudo_text, pseudo_rect)
 
         score_text = font.render(str(score), True, color)
-        score_rect = score_text.get_rect(center=(1050, y))
+        score_rect = score_text.get_rect(center=(height // 1.3, y))
         screen.blit(score_text, score_rect)
 
 
@@ -143,7 +162,7 @@ def draw_highscores(screen):
 
 def draw_cheat(screen, cheat_index):
     title = title_font.render("Cheat", True, (255, 255, 0))
-    title_rect = title.get_rect(center=(750, 100))
+    title_rect = title.get_rect(center=(height // 2, 100))
     screen.blit(title, title_rect)
 
     for i, cheat in enumerate(cheats):
@@ -156,7 +175,7 @@ def draw_cheat(screen, cheat_index):
             label = f"{cheat} : < {cheat_value[cheat]} >"
         
         text = font.render(label, True, color)
-        text_rect = text.get_rect(center=(750, 400 + i * 100))
+        text_rect = text.get_rect(center=(height // 2, 400 + i * 100))
         screen.blit(text, text_rect)
 
         if i == cheat_index:
@@ -216,6 +235,30 @@ def handle_menu_events(event):
     elif event.key == pygame.K_ESCAPE:
         running = False
 
+def handle_options_events(event):  ##
+    global options_index, state, running, dimension_index, height, width, screen
+
+    if event.key == pygame.K_UP:
+        if options_index > 0:
+            options_index -= 1
+    elif event.key == pygame.K_DOWN:
+        if options_index != len(options_options) - 1:
+            options_index += 1
+    elif event.key == pygame.K_RETURN:
+        if options_index == 0:
+            print("Volume option selected")
+        elif options_index == 1:
+            dimension_index = (dimension_index + 1) % len(screen_dimensions)
+            height, width = screen_dimensions[dimension_index]
+            screen = pygame.display.set_mode(screen_dimensions[dimension_index])
+        elif options_index == 2:
+            print("Colors option selected")
+        elif options_index == 3:
+            state = "menu"
+    elif event.key == pygame.K_ESCAPE:
+        running = False
+
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -231,7 +274,8 @@ while running:
                 handle_menu_events(event)
             elif state == "cheat":
                 handle_cheat_events(event)
-
+            elif state == "options":
+                handle_options_events(event)
 
     screen.fill((0, 0, 0))
 
@@ -240,7 +284,7 @@ while running:
     elif state == "highscores":
         draw_highscores(screen)
     elif state == "options":
-        draw_options(screen)
+        draw_options(screen, options_index)
     elif state == "cheat":
         draw_cheat(screen, cheat_index)
     elif state == "game":
