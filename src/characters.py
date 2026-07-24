@@ -10,13 +10,13 @@ class Color(Enum):
 	ORANGE = "orange"
 
 class Pacman:
-	def __init__(self, x: int, y: int, invinsible: bool = False):
+	def __init__(self, x: int, y: int, invincible: bool = False):
 		self.x = x
 		self.y = y
 		self.spawn_x = x
 		self.spawn_y = y
 		self.direction = (0, 0)
-		self.invinsible = invinsible
+		self.invincible = invincible
 
 	# Pour faire avancer le pacman sur la prochaine case
 	def move_to_next(self, direc_x: int, direc_y: int, tile_map: list[list[Tile]]):
@@ -41,12 +41,12 @@ class Pacman:
 	def back_to_spawn(self):
 		self.x = self.spawn_x
 		self.y = self.spawn_y
-		self.direction(0, 0)
+		self.direction = (0, 0)
 	
 	# Si le Pacman passe sur un super pacgum, on passe is_invinsible en true pour quelques secondes
-	def is_invinsible(self):
+	def is_invincible(self):
 		#mettre un timer 
-		return self.invinsible
+		return self.invincible
 
 
 class Ghost:
@@ -82,7 +82,7 @@ class Ghost:
 			return (self.spawn_x, self.spawn_y)
 		
 		# Si pacman est invinsible, les ghosts fuient dans leurs coin
-		if pacman.invinsible:
+		if pacman.invincible:
 			return self.run_to_spawn(width, height)
 		
 		# Cible pacman

@@ -10,12 +10,15 @@ import pygame
 
 def load_json(filepath: str) -> Any:
 	try:
+		cleaned_lines = []
 		with open(filepath, 'r' ) as file:
-			return json.load(file)
-		for line in file:
-			line = line.strip()
-			if not line or line.startswith('#'):
-				continue
+			for line in file:
+				line = line.strip()
+				if not line or line.startswith('#'):
+					continue
+				cleaned_lines.append(line)
+		json_content = "\n".join(cleaned_lines)
+		return json.loads(json_content)
 
 	except FileNotFoundError:
 		print(f"Error: {filepath} not found", file=sys.stderr)
@@ -26,6 +29,40 @@ def load_json(filepath: str) -> Any:
 			file=sys.stderr
 		)
 	sys.exit(1)
+
+def debug_print_game(game: GameSetting):
+	"""Fonction de debug temporaire pour afficher le labyrinthe et valider les spawns"""
+	print("\n=== TEST DE COMPILATION ET D'INITIALISATION ===")
+	print(f"Labyrinthe chargé ! Taille : {game.width}x{game.height}")
+	print(f"Nombre total de Pacgums placés : {game.pacgum}")
+	print(f"Position de Pacman : ({game.pacman.x}, {game.pacman.y})")
+	print("Positions de départ des fantômes :")
+	for ghost in game.ghosts:
+		print(f"  - {ghost.color.value.upper()} : ({ghost.x}, {ghost.y})")
+	print("==============================================\n")
+
+	# Dessin de la map dans la console
+	print("Aperçu de la carte générée (P = Pacman, G = Fantômes, # = Murs pleins, . = Pacgums, O = Super Pacgums) :")
+	for y in range(game.height):
+		row_str = ""
+		for x in range(game.width):
+			tile = game.tile_map[y][x]
+			
+			# On regarde qui est sur la case
+			if game.pacman.x == x and game.pacman.y == y:
+				row_str += " P "  # Pacman
+			elif any(g.x == x and g.y == y for g in game.ghosts):
+				row_str += " G "  # Un fantôme
+			elif tile.walls == 15:
+				row_str += "###"  # Case bloquée / Mur plein
+			elif tile.content.value == "superpacgum":
+				row_str += " O "  # Super Pacgum
+			elif tile.content.value == "pacgum":
+				row_str += " . "  # Pacgum normal
+			else:
+				row_str += "   "  # Case vide autorisée
+		print(row_str)
+	print("\nLa compilation est OK et le placement dynamique fonctionne ! 🚀\n")
 
 
 def main():
@@ -69,20 +106,17 @@ def main():
 		current_score = current_score, 
 	)
 
-	pygame.init()
-	screen = pygame.display.set_mode((width * 20, height * 20))
-	pygame.display.set_caption("Pac-Man")
-	clock = pygame.time.Clock()
-	direc_x, direc_y = 0, 0
-
-	while not game.is_finished:
-		clock.tick(10)
-
-
+	# TEMPORAIRE
+	debug_print_game(game)
 
 if __name__ == "__main__":
 	try:
 		main()
 	except Exception as error:
+		# TEMPORAIRE
+		import traceback
+		# TEMPORAIRE
+		traceback.print_exc()
+		# ON GARDE 
 		print("Error usage : python3 pac-man.py config.json")
 

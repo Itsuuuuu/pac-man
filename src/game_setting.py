@@ -2,6 +2,7 @@ from src.config_parser import GameConfig
 from src.tile import Tile, TileType, Pacgum
 from src.characters import Ghost, Color, Pacman
 import random
+from collections import deque
 
 # Y mettre les règles du jeu / fonctionnement globalement
 class GameSetting:
@@ -27,7 +28,7 @@ class GameSetting:
 		# Récupérer les cases
 		self.spawn_entities()
 
-	def build_map(self, maze_grid: list[list[int, int]]):
+	def build_map(self, maze_grid: list[list[int]]):
 		# list vide pour être remplie de list
 		self.tile_map = []
 
@@ -70,6 +71,26 @@ class GameSetting:
 		return (self.tile_map)
 		
 	
+	def find_nearest_spawn(self, start_x: int, start_y: int) -> tuple[int, int]:
+		if self.tile_map[start_y][start_x].zone_type == TileType.AUTORISED_CASE:
+			return start_x, start_y
+		
+		queue = deque([(start_x, start_y)])
+		visited = {(start_x, start_y)}
+
+		directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+		while queue:
+			current_x, current_y = queue.popleft()
+			for direc_x, direc_y in directions:
+				new_x, new_y = current_x + direc_x, current_y + direc_y
+				if 0 <= new_x < self.width and 0 <= new_y < self.height:
+					if (new_x, new_y) not in visited:
+						visited.add((new_x, new_y))
+						if self.tile_map[new_y][new_x].zone_type == TileType.AUTORISED_CASE:
+							return new_x, new_y
+						queue.append((new_x, new_y))
+		return start_x, start_y
+
 	def spawn_entities(self):
 		self.ghosts = []
 
@@ -105,12 +126,13 @@ class GameSetting:
 		center_x = self.width // 2
 		center_y = self.height // 2
 
-		self.tile_map[center_y][center_x].zone_type = TileType.SPAWN
-		if self.tile_map[center_y][center_x].content == Pacgum.PACGUM:
-			self.tile_map[center_y][center_x].content = Pacgum.NOTHING
+		spawn_x, spawn_y = self.find_nearest_spawn(center_x, center_y)
+
+		self.tile_map[spawn_y][spawn_x].zone_type = TileType.SPAWN
+		if self.tile_map[spawn_y][spawn_x].content == Pacgum.PACGUM:
+			self.tile_map[spawn_y][spawn_x].content = Pacgum.NOTHING
 			self.pacgum -= 1
-		
-		self.pacman = Pacman(x=center_x, y=center_y)
+		self.pacman = Pacman(x=spawn_x, y=spawn_y)
 
 	def update(self, direc_x: int, direc_y: int):
 		self.pacman.move_to_next(direc_x, direc_y, self.tile_map)
