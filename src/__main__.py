@@ -5,7 +5,7 @@ from mazegenerator import MazeGenerator
 from src.config_parser import GameConfig
 from src.game_setting import GameSetting
 import time
-import pygame
+import ui
 
 
 def load_json(filepath: str) -> Any:
@@ -106,8 +106,15 @@ def main():
 		current_score = current_score, 
 	)
 
-	# TEMPORAIRE
-	debug_print_game(game)
+	ui.init()
+	screen = ui.display.set_mode((width * 20, height * 20))
+	ui.display.set_caption("Pac-Man")
+	clock = ui.time.Clock()
+	direc_x, direc_y = 0, 0
+
+	while not game.is_finished:
+		clock.tick(10)
+
 
 if __name__ == "__main__":
 	try:

@@ -52,10 +52,10 @@ class GameSetting:
 			self.tile_map.append(tile_row)
 
 		corners = [
-			(1,1),
-			(self.width -2, 1),
-			(self.width -2, self.height - 2),
-			(1, self.height - 2)
+			(0,0),
+			(self.width -1, 0),
+			(self.width -1, self.height - 1),
+			(0, self.height - 1)
 		]
 
 		for corner in corners:
@@ -96,10 +96,10 @@ class GameSetting:
 
 		# Définition des 4 coins avec décalage pour les ghosts
 		ghosts_spawn = [
-			{"color": Color.RED, "corner": (1,1), "offset": (1,0)},
-			{"color": Color.PINK, "corner": (self.width - 2, 1), "offset": (0, 1)},
-			{"color": Color.BLUE, "corner": (self.width -2, self.height -2), "offset": (-1, 0)},
-			{"color": Color.ORANGE, "corner": (1, self.height - 2), "offset": (0, -1)}
+			{"color": Color.RED, "corner": (1,0), "offset": (0,0)},
+			{"color": Color.PINK, "corner": (self.width - 1, 0), "offset": (0, 1)},
+			{"color": Color.BLUE, "corner": (self.width -1, self.height -1), "offset": (-1, 0)},
+			{"color": Color.ORANGE, "corner": (0, self.height - 1), "offset": (0, -1)}
 		]
 
 		# Placer les ghosts dynamiquement
