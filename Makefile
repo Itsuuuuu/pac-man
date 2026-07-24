@@ -7,7 +7,7 @@ run:
 	uv run python -m src config.json
 
 debug:
-	uv run python -m pdb -m src
+	uv run python -m pdb -m src config.json
 
 clean:
 	rm -rf __pycache__

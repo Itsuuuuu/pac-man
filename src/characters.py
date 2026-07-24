@@ -3,6 +3,15 @@ from enum import Enum
 from src.ghost_algo import bfs_next_step, wall_from_tiles
 import random
 
+# Correspondance direction (dx, dy) -> bit de mur (N=1, E=2, S=4, W=8)
+DIRECTION_FLAGS = {
+	(0, -1): 1,
+	(1, 0): 2,
+	(0, 1): 4,
+	(-1, 0): 8,
+}
+
+
 class Color(Enum):
 	RED = "red"
 	PINK = "pink"
@@ -18,24 +27,21 @@ class Pacman:
 		self.direction = (0, 0)
 		self.invincible = invincible
 
+	# Indique si pacman peut avancer dans cette direction (aucun mur sur la case courante)
+	def can_move(self, direc_x: int, direc_y: int, tile_map: list[list[Tile]]) -> bool:
+		direction_flag = DIRECTION_FLAGS.get((direc_x, direc_y), 0)
+		if direction_flag == 0:
+			return False
+		return not tile_map[self.y][self.x].has_wall(direction_flag)
+
 	# Pour faire avancer le pacman sur la prochaine case
 	def move_to_next(self, direc_x: int, direc_y: int, tile_map: list[list[Tile]]):
-		# Permet de convertir un déplacement en une direction (N, E, S, W)
-		direction_flag = 0
-		if (direc_x, direc_y) == (0, -1): direction_flag = 1
-		elif (direc_x, direc_y) == (1, 0): direction_flag = 2
-		elif(direc_x, direc_y) == (0, 1): direction_flag = 4
-		elif (direc_x, direc_y) == (-1, 0): direction_flag = 8
-
-		if direction_flag == 0:
-			return
-		
-		current_tile = tile_map[self.y][self.x]
 		# Verification mur, si non, déplacement
-		if not current_tile.has_wall(direction_flag):
-			self.x += direc_x
-			self.y += direc_y
-			self.direction = (direc_x, direc_y)
+		if not self.can_move(direc_x, direc_y, tile_map):
+			return
+		self.x += direc_x
+		self.y += direc_y
+		self.direction = (direc_x, direc_y)
 	
 	# Si le Pacman se fait attraper par un ghost, il se fait tp au point de spawn
 	def back_to_spawn(self):

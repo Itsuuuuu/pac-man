@@ -1,0 +1,330 @@
+import os
+
+import pygame
+
+from src.game_builder import build_game
+from src.tile import Pacgum
+from src.characters import Color
+from .utils import load_highscores
+from .draw import draw_menu, draw_highscores, draw_options, draw_cheat
+from .draw_maze import draw_game_screen
+
+
+# Chemin absolu vers les polices (robuste, independant du cwd)
+FONT_DIR = os.path.join(os.path.dirname(__file__), "font_pacman")
+
+# Duree d'invincibilite apres un super pacgum (ms)
+INVINCIBLE_MS = 6000
+# Intervalle entre deux deplacements logiques (ms)
+MOVE_INTERVAL_MS = 150
+
+# Touches de direction -> vecteur de deplacement
+KEY_DIRECTIONS = {
+	pygame.K_UP: (0, -1),
+	pygame.K_DOWN: (0, 1),
+	pygame.K_LEFT: (-1, 0),
+	pygame.K_RIGHT: (1, 0),
+}
+
+
+class PacManApp:
+	"""Application principale : gere le menu, les options, les scores et la boucle de jeu."""
+
+	def __init__(self, config_path):
+		self.config_path = config_path
+
+		pygame.init()
+		pygame.display.set_caption("Pac-Man")
+
+		# Menus
+		self.cheats = [
+			"Invincibility", "Infinite lives", "Edible ghosts",
+			"Level skips", "Point additions",
+		]
+		self.cheat_states = {
+			"Invincibility": False,
+			"Infinite lives": False,
+			"Edible ghosts": False,
+		}
+		self.cheat_value = {"Level skips": 0, "Point additions": 0}
+		self.cheat_max = {"Level skips": 42, "Point additions": 9999}
+
+		self.options = ["Start Game", "Options", "High Scores", "Cheat", "Exit"]
+		self.options_options = ["Volume", "Dimensions", "Colors", "Back"]
+		# 4 resolutions standards (le labyrinthe s'adapte automatiquement a la fenetre)
+		self.screen_dimensions = [
+			(1024, 768),    # XGA (4:3)
+			(1280, 800),    # WXGA (16:10)
+			(1600, 900),    # HD+ (16:9)
+			(1920, 1080),   # Full HD (16:9)
+		]
+
+		self.dimension_index = 0
+		self.menu_index = 0
+		self.options_index = 0
+		self.cheat_index = 0
+
+		self.screen = pygame.display.set_mode(self.screen_dimensions[self.dimension_index])
+		# Reference de centrage horizontal des menus = largeur de la fenetre
+		self.center_ref = self.screen_dimensions[self.dimension_index][0]
+
+		self.title_font = pygame.font.Font(os.path.join(FONT_DIR, "Pacfont-ZEBZ.ttf"), 90)
+		self.font = pygame.font.SysFont("Rockwell Nova", 50, bold=True)
+		self.hud_font = pygame.font.SysFont("Rockwell Nova", 28, bold=True)
+
+		self.highscores = load_highscores("hightscore.json")
+		self.clock = pygame.time.Clock()
+
+		self.state = "menu"
+		self.running = True
+
+		# Etat de la partie en cours
+		self.game = None
+		self.direction = (0, 0)
+		# Buffer de touches : stocke la prochaine commande (1 maximum)
+		self.input_buffer = []
+		self.move_timer = 0
+		self.invincible_timer = 0
+
+	# ------------------------------------------------------------------ #
+	# Gestion des entrees
+	# ------------------------------------------------------------------ #
+	def handle_menu_events(self, event):
+		if event.key == pygame.K_UP:
+			if self.menu_index > 0:
+				self.menu_index -= 1
+		elif event.key == pygame.K_DOWN:
+			if self.menu_index != len(self.options) - 1:
+				self.menu_index += 1
+		elif event.key == pygame.K_RETURN:
+			if self.menu_index == 0:
+				self.start_game()
+			elif self.menu_index == 1:
+				self.state = "options"
+			elif self.menu_index == 2:
+				self.state = "highscores"
+			elif self.menu_index == 3:
+				self.state = "cheat"
+			elif self.menu_index == 4:
+				self.running = False
+
+	def handle_options_events(self, event):
+		if event.key == pygame.K_UP:
+			if self.options_index > 0:
+				self.options_index -= 1
+		elif event.key == pygame.K_DOWN:
+			if self.options_index != len(self.options_options) - 1:
+				self.options_index += 1
+		elif event.key == pygame.K_RETURN:
+			if self.options_index == 1:
+				self.dimension_index = (self.dimension_index + 1) % len(self.screen_dimensions)
+				self.screen = pygame.display.set_mode(self.screen_dimensions[self.dimension_index])
+				self.center_ref = self.screen_dimensions[self.dimension_index][0]
+			elif self.options_index == 3:
+				self.state = "menu"
+
+	def handle_cheat_events(self, event):
+		current_cheat = self.cheats[self.cheat_index]
+
+		if event.key == pygame.K_UP:
+			if self.cheat_index > 0:
+				self.cheat_index -= 1
+		elif event.key == pygame.K_DOWN:
+			if self.cheat_index != len(self.cheats) - 1:
+				self.cheat_index += 1
+		elif event.key == pygame.K_RETURN:
+			if current_cheat in self.cheat_states:
+				self.cheat_states[current_cheat] = not self.cheat_states[current_cheat]
+		elif event.key == pygame.K_RIGHT:
+			if current_cheat in self.cheat_value:
+				if self.cheat_value[current_cheat] < self.cheat_max[current_cheat]:
+					self.cheat_value[current_cheat] += 1
+		elif event.key == pygame.K_LEFT:
+			if current_cheat in self.cheat_value:
+				if self.cheat_value[current_cheat] > 0:
+					self.cheat_value[current_cheat] -= 1
+
+	def handle_game_events(self, event):
+		key_dir = KEY_DIRECTIONS.get(event.key)
+		if key_dir is None:
+			return
+
+		pacman = self.game.pacman
+		if pacman.can_move(key_dir[0], key_dir[1], self.game.tile_map):
+			# Virage possible tout de suite -> on l'applique sans attendre (pacman part / avance)
+			self.direction = key_dir
+			self.input_buffer.clear()
+		else:
+			# Sinon pacman continue tout droit et on garde la commande en buffer (1 max),
+			# elle s'appliquera au prochain pas ou le passage s'ouvre.
+			self.input_buffer.clear()
+			self.input_buffer.append(key_dir)
+
+	def process_events(self):
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				self.running = False
+				continue
+
+			if event.type != pygame.KEYDOWN:
+				continue
+
+			if event.key == pygame.K_ESCAPE:
+				if self.state == "menu":
+					self.running = False
+				else:
+					self.state = "menu"
+				continue
+
+			if self.state == "menu":
+				self.handle_menu_events(event)
+			elif self.state == "options":
+				self.handle_options_events(event)
+			elif self.state == "cheat":
+				self.handle_cheat_events(event)
+			elif self.state == "game":
+				self.handle_game_events(event)
+
+	# ------------------------------------------------------------------ #
+	# Logique de jeu
+	# ------------------------------------------------------------------ #
+	def start_game(self):
+		self.game = build_game(self.config_path)
+		self.direction = (0, 0)
+		self.input_buffer.clear()
+		self.move_timer = 0
+		self.invincible_timer = 0
+		if self.cheat_states["Invincibility"]:
+			self.game.pacman.invincible = True
+			self.invincible_timer = INVINCIBLE_MS
+		if self.cheat_value["Point additions"]:
+			self.game.current_score += self.cheat_value["Point additions"]
+		self.state = "game"
+
+	def find_blinky(self):
+		for ghost in self.game.ghosts:
+			if ghost.color == Color.RED:
+				return ghost
+		return None
+
+	def step_game(self):
+		"""Fait avancer la partie d'un pas : deplacement, ramassage, collisions, fin."""
+		game = self.game
+		pacman = game.pacman
+
+		# Buffer de touches : on tente d'appliquer la commande en attente.
+		# Si le virage est possible, elle devient la direction courante et est retiree ;
+		# sinon pacman continue tout droit et la commande reste en attente.
+		if self.input_buffer:
+			next_dir = self.input_buffer[0]
+			if pacman.can_move(next_dir[0], next_dir[1], game.tile_map):
+				self.direction = next_dir
+				self.input_buffer.pop(0)
+
+		# Deplacement pacman + fantomes (logique deja presente dans GameSetting)
+		pacman.move_to_next(self.direction[0], self.direction[1], game.tile_map)
+		blinky = self.find_blinky()
+		for ghost in game.ghosts:
+			ghost.move(game.tile_map, game.width, game.height, pacman, blinky)
+
+		# Ramassage des pacgums
+		tile = game.tile_map[pacman.y][pacman.x]
+		if tile.content == Pacgum.PACGUM:
+			game.current_score += game.config.points_per_pacgum
+			tile.content = Pacgum.NOTHING
+			game.pacgum -= 1
+		elif tile.content == Pacgum.SUPERPACGUM:
+			game.current_score += game.config.points_per_super_pacgum
+			tile.content = Pacgum.NOTHING
+			pacman.invincible = True
+			self.invincible_timer = INVINCIBLE_MS
+
+		# Collisions avec les fantomes
+		self.resolve_collisions()
+
+		# Victoire : plus aucun pacgum
+		if game.pacgum <= 0:
+			self.end_game(won=True)
+
+	def resolve_collisions(self):
+		game = self.game
+		pacman = game.pacman
+		for ghost in game.ghosts:
+			if ghost.x != pacman.x or ghost.y != pacman.y or ghost.is_dead:
+				continue
+			if pacman.invincible or self.cheat_states["Edible ghosts"]:
+				ghost.back_to_spawn()
+				game.current_score += game.config.points_per_ghost
+			else:
+				self.lose_life()
+				return
+
+	def lose_life(self):
+		game = self.game
+		if not self.cheat_states["Infinite lives"]:
+			game.current_lives -= 1
+		game.pacman.back_to_spawn()
+		self.direction = (0, 0)
+		self.input_buffer.clear()
+		if game.current_lives <= 0:
+			self.end_game(won=False)
+
+	def end_game(self, won):
+		self.game.is_finished = True
+		self.state = "menu"
+		self.menu_index = 0
+
+	def update_game(self, dt):
+		if self.invincible_timer > 0:
+			self.invincible_timer -= dt
+			if self.invincible_timer <= 0 and not self.cheat_states["Invincibility"]:
+				self.game.pacman.invincible = False
+
+		self.move_timer += dt
+		while self.move_timer >= MOVE_INTERVAL_MS and self.state == "game":
+			self.move_timer -= MOVE_INTERVAL_MS
+			self.step_game()
+
+	# ------------------------------------------------------------------ #
+	# Rendu
+	# ------------------------------------------------------------------ #
+	def render(self):
+		self.screen.fill((0, 0, 0))
+
+		if self.state == "menu":
+			draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index)
+		elif self.state == "game":
+			draw_game_screen(self.screen, self.game, self.hud_font)
+		elif self.state == "highscores":
+			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores)
+		elif self.state == "options":
+			draw_options(
+				screen=self.screen,
+				font=self.font,
+				title_font=self.title_font,
+				height=self.center_ref,
+				options_options=self.options_options,
+				options_index=self.options_index,
+				screen_dimensions=self.screen_dimensions,
+				dimension_index=self.dimension_index,
+			)
+		elif self.state == "cheat":
+			draw_cheat(
+				self.screen, self.font, self.title_font, self.center_ref,
+				self.cheats, self.cheat_states, self.cheat_value, self.cheat_index,
+			)
+
+		pygame.display.flip()
+
+	# ------------------------------------------------------------------ #
+	# Boucle principale
+	# ------------------------------------------------------------------ #
+	def run(self):
+		while self.running:
+			dt = self.clock.tick(60)
+			self.process_events()
+			if self.state == "game" and self.game is not None:
+				self.update_game(dt)
+			self.render()
+
+		pygame.quit()
