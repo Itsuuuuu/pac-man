@@ -5,8 +5,8 @@ import pygame
 from src.game_builder import build_game
 from src.tile import Pacgum
 from src.characters import Color
-from .utils import load_highscores
-from .draw import draw_menu, draw_highscores, draw_options, draw_cheat
+from .utils import load_highscores, save_highscores
+from .draw import draw_menu, draw_highscores, draw_options, draw_cheat, draw_enter_name
 from .draw_maze import draw_game_screen
 
 
@@ -25,6 +25,10 @@ KEY_DIRECTIONS = {
 	pygame.K_LEFT: (-1, 0),
 	pygame.K_RIGHT: (1, 0),
 }
+
+# Maximum de charactere pour un pseudo
+MAX_NAME_LENGTH = 10
+
 
 
 class PacManApp:
@@ -72,7 +76,7 @@ class PacManApp:
 		self.font = pygame.font.SysFont("Rockwell Nova", 50, bold=True)
 		self.hud_font = pygame.font.SysFont("Rockwell Nova", 28, bold=True)
 
-		self.highscores = load_highscores("hightscore.json")
+		self.highscores = load_highscores("highscore.json")
 		self.clock = pygame.time.Clock()
 
 		self.state = "menu"
@@ -85,6 +89,8 @@ class PacManApp:
 		self.input_buffer = []
 		self.move_timer = 0
 		self.invincible_timer = 0
+
+		self.player_name = ""
 
 	# ------------------------------------------------------------------ #
 	# Gestion des entrees
@@ -160,6 +166,19 @@ class PacManApp:
 			self.input_buffer.clear()
 			self.input_buffer.append(key_dir)
 
+	def handle_enter_name_events(self, event):
+		if event.key == pygame.K_RETURN:
+			pseudo = self.player_name.strip() or "PLAYER"
+			save_highscores("highscore.json", pseudo, self.game.current_score)
+			self.highscores = load_highscores("highscore.json")
+			self.player_name = ""
+			self.state = "menu"
+		elif event.key == pygame.K_BACKSPACE:
+			self.player_name = self.player_name[:-1]
+		elif event.unicode.isalnum() and len(self.player_name) < MAX_NAME_LENGTH:
+			self.player_name += event.unicode
+
+
 	def process_events(self):
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -184,6 +203,8 @@ class PacManApp:
 				self.handle_cheat_events(event)
 			elif self.state == "game":
 				self.handle_game_events(event)
+			elif self.state == "enter_name":
+				self.handle_enter_name_events(event)
 
 	# ------------------------------------------------------------------ #
 	# Logique de jeu
@@ -264,14 +285,22 @@ class PacManApp:
 		if not self.cheat_states["Infinite lives"]:
 			game.current_lives -= 1
 		game.pacman.back_to_spawn()
+		for ghost in game.ghosts:
+			ghost.x = ghost.spawn_x
+			ghost.y = ghost.spawn_y
+			ghost.is_dead = False
 		self.direction = (0, 0)
 		self.input_buffer.clear()
 		if game.current_lives <= 0:
 			self.end_game(won=False)
 
+
 	def end_game(self, won):
 		self.game.is_finished = True
-		self.state = "menu"
+		if not won:
+			self.state = "enter_name"
+		else:
+			self.state = "menu"
 		self.menu_index = 0
 
 	def update_game(self, dt):
@@ -313,6 +342,8 @@ class PacManApp:
 				self.screen, self.font, self.title_font, self.center_ref,
 				self.cheats, self.cheat_states, self.cheat_value, self.cheat_index,
 			)
+		elif self.state == "enter_name":
+			draw_enter_name(self.screen, self.font, self.title_font, self.center_ref, self.player_name)
 
 		pygame.display.flip()
 

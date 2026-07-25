@@ -24,7 +24,7 @@ def draw_menu(screen, font, title_font, height, options, menu_index):
 
     for i, option in enumerate(options):
         text = font.render(option, True, (255, 0, 0))
-        text_rect = text.get_rect(center=(height // 2, 300 + i * 100))  #
+        text_rect = text.get_rect(center=(height // 2, 250 + i * 100))  #
         screen.blit(text, text_rect)
         if i == menu_index:
             circle = 15
@@ -128,7 +128,7 @@ def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_val
             label = f"{cheat} : < {cheat_value[cheat]} >"
         
         text = font.render(label, True, color)
-        text_rect = text.get_rect(center=(height // 2, 400 + i * 100))
+        text_rect = text.get_rect(center=(height // 2, 250 + i * 100))
         screen.blit(text, text_rect)
 
         if i == cheat_index:
@@ -136,3 +136,21 @@ def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_val
             x = text_rect.left - 50
             y = text_rect.centery
             draw_pacman(screen, x, y, circle, mouth_angle=20)
+
+def draw_enter_name(screen, font, title_font, height, player_name):
+    title = title_font.render("Game Over", True, (255, 0, 0))
+    title_rect = title.get_rect(center=(height // 2, 150))
+    screen.blit(title, title_rect)
+
+    prompt = font.render("Enter your name:", True, (255, 255, 0))
+    prompt_rect = prompt.get_rect(center=(height // 2, 350))
+    screen.blit(prompt, prompt_rect)
+
+    display_name = player_name if player_name else "_"
+    name_surface = font.render(display_name, True, (0, 255, 0))
+    name_rect = name_surface.get_rect(center=(height // 2, 430))
+    screen.blit(name_surface, name_rect)
+
+    hint = font.render("Press ENTER to confirm", True, (150, 150, 150))
+    hint_rect = hint.get_rect(center=(height // 2, 550))
+    screen.blit(hint, hint_rect)

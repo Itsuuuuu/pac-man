@@ -35,20 +35,28 @@ def compute_layout(screen, game):
 
 
 def draw_maze(screen, game, tile, offset_x, offset_y):
-	line_width = max(1, tile // 12)
+	line_width = max(2, tile // 8)
+	cap_radius = line_width // 2
+
 	for row in game.tile_map:
 		for t in row:
 			px = offset_x + t.x * tile
 			py = offset_y + t.y * tile
 
+			segments = []
 			if t.wall_north:
-				pygame.draw.line(screen, WALL_COLOR, (px, py), (px + tile, py), line_width)
+				segments.append(((px, py), (px + tile, py)))
 			if t.wall_south:
-				pygame.draw.line(screen, WALL_COLOR, (px, py + tile), (px + tile, py + tile), line_width)
+				segments.append(((px, py + tile), (px + tile, py + tile)))
 			if t.wall_east:
-				pygame.draw.line(screen, WALL_COLOR, (px + tile, py), (px + tile, py + tile), line_width)
+				segments.append(((px + tile, py), (px + tile, py + tile)))
 			if t.wall_west:
-				pygame.draw.line(screen, WALL_COLOR, (px, py), (px, py + tile), line_width)
+				segments.append(((px, py), (px, py + tile)))
+
+			for start, end in segments:
+				pygame.draw.line(screen, WALL_COLOR, start, end, line_width)
+				pygame.draw.circle(screen, WALL_COLOR, start, cap_radius)
+				pygame.draw.circle(screen, WALL_COLOR, end, cap_radius)
 
 			center = (px + tile // 2, py + tile // 2)
 			if t.content == Pacgum.PACGUM:

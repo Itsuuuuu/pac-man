@@ -12,7 +12,11 @@ def main() -> None:
 	config_path = sys.argv[1]
 
 	app = PacManApp(config_path)
-	app.run()
+	try:
+		app.run()
+	except KeyboardInterrupt:
+		print("Exiting the PacMan game...")
+		sys.exit(0)
 
 
 if __name__ == "__main__":

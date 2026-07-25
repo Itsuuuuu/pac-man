@@ -6,7 +6,7 @@ class LevelConfig(BaseModel):
 	height: int = Field(default= 10, gt= 9)
 
 class GameConfig(BaseModel):
-	highscore_filename: str = "hightscore.json"
+	highscore_filename: str = "highscore.json"
 	level: list[LevelConfig]
 	lives: int = Field(default= 1, gt= 0)
 	pacgum: int = Field(default= 1, gt= 0)
