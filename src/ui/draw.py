@@ -142,15 +142,19 @@ def draw_enter_name(screen, font, title_font, height, player_name):
     title_rect = title.get_rect(center=(height // 2, 150))
     screen.blit(title, title_rect)
 
+    scores = font.render("Ton score est de:", True, (255, 255, 255))
+    scores_rect = scores.get_rect(center=(height // 2, 300))
+    screen.blit(scores, scores_rect)
+
     prompt = font.render("Enter your name:", True, (255, 255, 0))
-    prompt_rect = prompt.get_rect(center=(height // 2, 350))
+    prompt_rect = prompt.get_rect(center=(height // 2, 425))
     screen.blit(prompt, prompt_rect)
 
     display_name = player_name if player_name else "_"
     name_surface = font.render(display_name, True, (0, 255, 0))
-    name_rect = name_surface.get_rect(center=(height // 2, 430))
+    name_rect = name_surface.get_rect(center=(height // 2, 500))
     screen.blit(name_surface, name_rect)
 
     hint = font.render("Press ENTER to confirm", True, (150, 150, 150))
-    hint_rect = hint.get_rect(center=(height // 2, 550))
+    hint_rect = hint.get_rect(center=(height // 2, 600))
     screen.blit(hint, hint_rect)

@@ -35,6 +35,8 @@ KEY_DIRECTIONS = {
 MAX_NAME_LENGTH = 10
 
 
+CHEAT_REPEAT_MS = 120
+
 
 class PacManApp:
 	"""Application principale : gere le menu, les options, les scores et la boucle de jeu."""
@@ -96,6 +98,8 @@ class PacManApp:
 		self.pacman_timer = 0
 		self.ghost_timer = 0
 		self.invincible_timer = 0
+		self.cheat_repeat_timer = 0
+		self.game_started = False
 
 		self.player_name = ""
 
@@ -148,19 +152,32 @@ class PacManApp:
 		elif event.key == pygame.K_RETURN:
 			if current_cheat in self.cheat_states:
 				self.cheat_states[current_cheat] = not self.cheat_states[current_cheat]
-		elif event.key == pygame.K_RIGHT:
-			if current_cheat in self.cheat_value:
-				if self.cheat_value[current_cheat] < self.cheat_max[current_cheat]:
-					self.cheat_value[current_cheat] += 1
-		elif event.key == pygame.K_LEFT:
-			if current_cheat in self.cheat_value:
-				if self.cheat_value[current_cheat] > 0:
-					self.cheat_value[current_cheat] -= 1
+
+	def update_cheat(self, dt):
+		"""Permet de maintenir DROITE/GAUCHE pour faire defiler une valeur en continu."""
+		self.cheat_repeat_timer += dt
+		if self.cheat_repeat_timer < CHEAT_REPEAT_MS:
+			return
+		self.cheat_repeat_timer = 0
+
+		current_cheat = self.cheats[self.cheat_index]
+		if current_cheat not in self.cheat_value:
+			return
+
+		keys = pygame.key.get_pressed()
+		if keys[pygame.K_RIGHT]:
+			if self.cheat_value[current_cheat] < self.cheat_max[current_cheat]:
+				self.cheat_value[current_cheat] += 1
+		elif keys[pygame.K_LEFT]:
+			if self.cheat_value[current_cheat] > 0:
+				self.cheat_value[current_cheat] -= 1
 
 	def handle_game_events(self, event):
 		key_dir = KEY_DIRECTIONS.get(event.key)
 		if key_dir is None:
 			return
+
+		self.game_started = True
 
 		pacman = self.game.pacman
 		if pacman.can_move(key_dir[0], key_dir[1], self.game.tile_map):
@@ -223,6 +240,7 @@ class PacManApp:
 		self.pacman_timer = 0
 		self.ghost_timer = 0
 		self.invincible_timer = 0
+		self.game_started = False
 		if self.cheat_states["Invincibility"]:
 			self.game.pacman.invincible = True
 			self.invincible_timer = INVINCIBLE_MS
@@ -279,6 +297,8 @@ class PacManApp:
 
 	def step_ghosts(self):
 		"""Fait avancer tous les fantomes d'une case, puis verifie les collisions."""
+		if not self.game_started:
+			return
 		game = self.game
 		blinky = self.find_blinky()
 		for ghost in game.ghosts:
@@ -354,7 +374,7 @@ class PacManApp:
 		elif self.state == "game":
 			draw_game_screen(self.screen, self.game, self.hud_font)
 		elif self.state == "highscores":
-			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores)
+			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores[:10])
 		elif self.state == "options":
 			draw_options(
 				screen=self.screen,
@@ -385,6 +405,8 @@ class PacManApp:
 			self.process_events()
 			if self.state == "game" and self.game is not None:
 				self.update_game(dt)
+			elif self.state == "cheat":
+				self.update_cheat(dt)
 			self.render()
 
 		pygame.quit()
