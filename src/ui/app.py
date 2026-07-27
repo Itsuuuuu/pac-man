@@ -15,8 +15,13 @@ FONT_DIR = os.path.join(os.path.dirname(__file__), "font_pacman")
 
 # Duree d'invincibilite apres un super pacgum (ms)
 INVINCIBLE_MS = 6000
-# Intervalle entre deux deplacements logiques (ms)
-MOVE_INTERVAL_MS = 150
+
+# Vitesses : delai entre deux deplacements d'une case (ms).
+# Plus la valeur est GRANDE, plus le personnage est LENT.
+PACMAN_MOVE_MS = 200
+GHOST_MOVE_MS = 260
+# Les fantomes ralentissent encore quand pacman est invincible (ils fuient)
+GHOST_FRIGHTENED_MOVE_MS = 380
 
 # Touches de direction -> vecteur de deplacement
 KEY_DIRECTIONS = {
@@ -87,7 +92,9 @@ class PacManApp:
 		self.direction = (0, 0)
 		# Buffer de touches : stocke la prochaine commande (1 maximum)
 		self.input_buffer = []
-		self.move_timer = 0
+		# Timers de deplacement separes : pacman et fantomes avancent a leur propre rythme
+		self.pacman_timer = 0
+		self.ghost_timer = 0
 		self.invincible_timer = 0
 
 		self.player_name = ""
@@ -213,7 +220,8 @@ class PacManApp:
 		self.game = build_game(self.config_path)
 		self.direction = (0, 0)
 		self.input_buffer.clear()
-		self.move_timer = 0
+		self.pacman_timer = 0
+		self.ghost_timer = 0
 		self.invincible_timer = 0
 		if self.cheat_states["Invincibility"]:
 			self.game.pacman.invincible = True
@@ -228,8 +236,14 @@ class PacManApp:
 				return ghost
 		return None
 
-	def step_game(self):
-		"""Fait avancer la partie d'un pas : deplacement, ramassage, collisions, fin."""
+	def ghost_interval(self):
+		"""Delai courant entre deux deplacements de fantome (plus lent s'ils fuient)."""
+		if self.game.pacman.invincible:
+			return GHOST_FRIGHTENED_MOVE_MS
+		return GHOST_MOVE_MS
+
+	def step_pacman(self):
+		"""Fait avancer pacman d'une case : direction, deplacement, ramassage, collisions."""
 		game = self.game
 		pacman = game.pacman
 
@@ -242,11 +256,7 @@ class PacManApp:
 				self.direction = next_dir
 				self.input_buffer.pop(0)
 
-		# Deplacement pacman + fantomes (logique deja presente dans GameSetting)
 		pacman.move_to_next(self.direction[0], self.direction[1], game.tile_map)
-		blinky = self.find_blinky()
-		for ghost in game.ghosts:
-			ghost.move(game.tile_map, game.width, game.height, pacman, blinky)
 
 		# Ramassage des pacgums
 		tile = game.tile_map[pacman.y][pacman.x]
@@ -260,12 +270,22 @@ class PacManApp:
 			pacman.invincible = True
 			self.invincible_timer = INVINCIBLE_MS
 
-		# Collisions avec les fantomes
+		# Collisions : pacman a pu entrer dans un fantome
 		self.resolve_collisions()
 
 		# Victoire : plus aucun pacgum
 		if game.pacgum <= 0:
 			self.end_game(won=True)
+
+	def step_ghosts(self):
+		"""Fait avancer tous les fantomes d'une case, puis verifie les collisions."""
+		game = self.game
+		blinky = self.find_blinky()
+		for ghost in game.ghosts:
+			ghost.move(game.tile_map, game.width, game.height, game.pacman, blinky)
+
+		# Collisions : un fantome a pu entrer dans pacman
+		self.resolve_collisions()
 
 	def resolve_collisions(self):
 		game = self.game
@@ -291,6 +311,9 @@ class PacManApp:
 			ghost.is_dead = False
 		self.direction = (0, 0)
 		self.input_buffer.clear()
+		# Repart d'un rythme propre pour ne pas se refaire toucher instantanement
+		self.pacman_timer = 0
+		self.ghost_timer = 0
 		if game.current_lives <= 0:
 			self.end_game(won=False)
 
@@ -309,10 +332,16 @@ class PacManApp:
 			if self.invincible_timer <= 0 and not self.cheat_states["Invincibility"]:
 				self.game.pacman.invincible = False
 
-		self.move_timer += dt
-		while self.move_timer >= MOVE_INTERVAL_MS and self.state == "game":
-			self.move_timer -= MOVE_INTERVAL_MS
-			self.step_game()
+		# Chaque entite avance a son propre rythme
+		self.pacman_timer += dt
+		while self.pacman_timer >= PACMAN_MOVE_MS and self.state == "game":
+			self.pacman_timer -= PACMAN_MOVE_MS
+			self.step_pacman()
+
+		self.ghost_timer += dt
+		while self.ghost_timer >= self.ghost_interval() and self.state == "game":
+			self.ghost_timer -= self.ghost_interval()
+			self.step_ghosts()
 
 	# ------------------------------------------------------------------ #
 	# Rendu
