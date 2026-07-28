@@ -6,7 +6,7 @@ from src.game_builder import build_game
 from src.tile import Pacgum
 from src.characters import Color
 from .utils import load_highscores, save_highscores
-from .draw import draw_menu, draw_highscores, draw_options, draw_cheat, draw_enter_name
+from .draw import draw_menu, draw_highscores, draw_options, draw_cheat, draw_enter_name, draw_pause
 from .draw_maze import draw_game_screen
 
 
@@ -62,6 +62,7 @@ class PacManApp:
 
 		self.options = ["Start Game", "Options", "High Scores", "Cheat", "Exit"]
 		self.options_options = ["Volume", "Dimensions", "Colors", "Back"]
+		self.pause_options = ["Resume", "Restart", "Volume", "Quit to Menu"]
 		# 4 resolutions standards (le labyrinthe s'adapte automatiquement a la fenetre)
 		self.screen_dimensions = [
 			(1024, 768),    # XGA (4:3)
@@ -74,6 +75,7 @@ class PacManApp:
 		self.menu_index = 0
 		self.options_index = 0
 		self.cheat_index = 0
+		self.pause_index = 0
 
 		self.screen = pygame.display.set_mode(self.screen_dimensions[self.dimension_index])
 		# Reference de centrage horizontal des menus = largeur de la fenetre
@@ -103,15 +105,27 @@ class PacManApp:
 
 		self.player_name = ""
 
-		self.editing_cheat = None
-		self.cheat_input_buffer = 0
-
-		self.current_level = 1
-		self.level_timer_ms = 0
-
 	# ------------------------------------------------------------------ #
 	# Gestion des entrees
 	# ------------------------------------------------------------------ #
+
+	def handle_pause_events(self, event):
+		if event.key == pygame.K_UP:
+			if self.pause_index > 0:
+				self.pause_index -= 1
+		elif event.key == pygame.K_DOWN:
+			if self.pause_index != len(self.pause_options) - 1:
+				self.pause_index += 1
+		elif event.key == pygame.K_RETURN:
+			if self.pause_index == 0:
+				self.state = "game"
+			if self.pause_index == 1:
+				self.start_game()
+			elif self.pause_index == 2:
+				print("Volume option not implemented yet.")
+			elif self.pause_index == 3:
+				self.state = "menu"
+
 	def handle_menu_events(self, event):
 		if event.key == pygame.K_UP:
 			if self.menu_index > 0:
@@ -149,10 +163,6 @@ class PacManApp:
 	def handle_cheat_events(self, event):
 		current_cheat = self.cheats[self.cheat_index]
 
-		if self.editing_cheat is not None:
-			self.handle_cheat_input_event(event)
-			return
-
 		if event.key == pygame.K_UP:
 			if self.cheat_index > 0:
 				self.cheat_index -= 1
@@ -162,34 +172,10 @@ class PacManApp:
 		elif event.key == pygame.K_RETURN:
 			if current_cheat in self.cheat_states:
 				self.cheat_states[current_cheat] = not self.cheat_states[current_cheat]
-			elif current_cheat == "Point additions":
-				self.editing_cheat = current_cheat
-				self.cheat_input_buffer = str(self.cheat_value[current_cheat])
-
-	def handle_cheat_input_event(self, event):
-		if event.key == pygame.K_RETURN:
-			value = int(self.cheat_input_buffer) if self.cheat_input_buffer else 0
-			value = min(value, self.cheat_max[self.editing_cheat])
-			self.cheat_value[self.editing_cheat] = value
-			self.editing_cheat = None
-			self.cheat_input_buffer = ""
-		elif event.key == pygame.K_ESCAPE:
-			self.editing_cheat = None
-			self.cheat_input_buffer = ""
-		elif event.key == pygame.K_BACKSPACE:
-			self.cheat_input_buffer = self.cheat_input_buffer[:-1]
-		elif event.unicode.isdigit():
-			max_digits = len(str(self.cheat_max[self.editing_cheat]))
-			if len(self.cheat_input_buffer) < max_digits:
-				self.cheat_input_buffer += event.unicode
 
 	def update_cheat(self, dt):
 		"""Permet de maintenir DROITE/GAUCHE pour faire defiler une valeur en continu."""
 		self.cheat_repeat_timer += dt
-
-		if self.editing_cheat is not None:
-			return
-
 		if self.cheat_repeat_timer < CHEAT_REPEAT_MS:
 			return
 		self.cheat_repeat_timer = 0
@@ -247,18 +233,20 @@ class PacManApp:
 				continue
 
 			if event.key == pygame.K_ESCAPE:
-				if self.state == "cheat" and self.editing_cheat is not None:
-					self.editing_cheat = None
-					self.cheat_input_buffer = ""
-					continue
 				if self.state == "menu":
 					self.running = False
+				elif self.state == "game":
+					self.state = "pause"
+				elif self.state == "pause":
+					self.state = "game"
 				else:
 					self.state = "menu"
 				continue
 
 			if self.state == "menu":
 				self.handle_menu_events(event)
+			elif self.state == "pause":
+				self.handle_pause_events(event)
 			elif self.state == "options":
 				self.handle_options_events(event)
 			elif self.state == "cheat":
@@ -279,7 +267,6 @@ class PacManApp:
 		self.ghost_timer = 0
 		self.invincible_timer = 0
 		self.game_started = False
-		self.level_timer_ms = self.game.config.level_max_time * 1000
 		if self.cheat_states["Invincibility"]:
 			self.game.pacman.invincible = True
 			self.invincible_timer = INVINCIBLE_MS
@@ -391,13 +378,6 @@ class PacManApp:
 			if self.invincible_timer <= 0 and not self.cheat_states["Invincibility"]:
 				self.game.pacman.invincible = False
 
-		if self.game_started:
-			self.level_timer_ms -= dt
-			if self.level_timer_ms <= 0:
-				self.level_timer_ms = self.game.config.level_max_time * 1000
-				self.lose_life()
-				return
-
 		# Chaque entite avance a son propre rythme
 		self.pacman_timer += dt
 		while self.pacman_timer >= PACMAN_MOVE_MS and self.state == "game":
@@ -418,8 +398,7 @@ class PacManApp:
 		if self.state == "menu":
 			draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index)
 		elif self.state == "game":
-			seconds_remaining = max(0, self.level_timer_ms) // 1000
-			draw_game_screen(self.screen, self.game, self.hud_font, self.current_level, seconds_remaining)
+			draw_game_screen(self.screen, self.game, self.hud_font)
 		elif self.state == "highscores":
 			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores[:10])
 		elif self.state == "options":
@@ -437,13 +416,11 @@ class PacManApp:
 			draw_cheat(
 				self.screen, self.font, self.title_font, self.center_ref,
 				self.cheats, self.cheat_states, self.cheat_value, self.cheat_index,
-				self.editing_cheat, self.cheat_input_buffer,
 			)
 		elif self.state == "enter_name":
-			draw_enter_name(
-				self.screen, self.font, self.title_font, self.center_ref, self.player_name, self.game.current_score
-			)
-
+			draw_enter_name(self.screen, self.font, self.title_font, self.center_ref, self.player_name)
+		elif self.state == "pause":
+			draw_pause(self.screen, self.font, self.title_font, self.center_ref, self.pause_options, self.pause_index)
 		pygame.display.flip()
 
 	# ------------------------------------------------------------------ #
