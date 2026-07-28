@@ -18,19 +18,26 @@ GHOST_COLOR_MAP = {
 	"orange": (255, 165, 0),
 }
 
+SIDEBAR_WIDTH = 260
+BOX_GAP = 16
+BOX_BORDER_COLOR = (255, 255, 255)
+HEART_FILLED_COLOR = (255, 0, 0)
+HEART_EMPTY_COLOR = (80, 80, 80)
+TIMER_WARNING_COLOR = (255, 60, 60)
+
 
 def compute_layout(screen, game):
 	"""Calcule la taille de tuile et le decalage pour centrer le labyrinthe dans la fenetre."""
-	avail_w = screen.get_width() - 2 * MARGIN
-	avail_h = screen.get_height() - HUD_HEIGHT - 2 * MARGIN
+	avail_w = screen.get_width() - SIDEBAR_WIDTH - 3 * MARGIN
+	avail_h = screen.get_height() - 2 * MARGIN
 
 	# Plus grande tuile carree qui rentre dans la zone disponible
 	tile = max(8, min(avail_w // game.width, avail_h // game.height))
 
 	maze_w = tile * game.width
 	maze_h = tile * game.height
-	offset_x = (screen.get_width() - maze_w) // 2
-	offset_y = HUD_HEIGHT + (screen.get_height() - HUD_HEIGHT - maze_h) // 2
+	offset_x = MARGIN + (avail_w - maze_w) // 2
+	offset_y = MARGIN + (avail_h - maze_h) // 2
 	return tile, offset_x, offset_y
 
 
@@ -92,19 +99,73 @@ def draw_entities(screen, game, tile, offset_x, offset_y):
 			color = (120, 120, 120) if ghost.is_dead else GHOST_COLOR_MAP.get(ghost.color.value, (255, 255, 255))
 			pygame.draw.circle(screen, color, center, tile // 2 - 2)
 
+def draw_heart(screen, center_x, center_y, size, filled):
+	color = HEART_FILLED_COLOR if filled else HEART_EMPTY_COLOR
+	radius = size // 4
 
-def draw_hud(screen, font, game):
-	score_text = font.render(f"Score: {game.current_score}", True, (255, 255, 0))
-	screen.blit(score_text, (MARGIN, 12))
+	pygame.draw.circle(screen, color, (center_x - radius, center_y - radius // 2), radius)
+	pygame.draw.circle(screen, color, (center_x + radius, center_y - radius // 2), radius)
 
-	lives_text = font.render(f"Lives: {game.current_lives}", True, (255, 0, 0))
-	lives_rect = lives_text.get_rect(topright=(screen.get_width() - MARGIN, 12))
-	screen.blit(lives_text, lives_rect)
+	points = [
+		(center_x - size // 2, center_y - radius // 3),
+		(center_x + size // 2, center_y - radius // 3),
+		(center_x, center_y + size // 2),
+	]
+	pygame.draw.polygon(screen, color, points)
+
+def draw_box(screen, font, x, y, width, height, label, label_color=(255, 255, 255)):
+	"""Dessine un cadre avec un label en haut, retourne le point (x, y) ou dessiner le contenu."""
+	pygame.draw.rect(screen, BOX_BORDER_COLOR, (x, y, width, height), 2)
+	label_surface = font.render(label, True, label_color)
+	screen.blit(label_surface, (x + 15, y + 12))
+	return x + 15, y + 50
 
 
-def draw_game_screen(screen, game, hud_font=None):
+def draw_sidebar(screen, font, game, level, seconds_remaining):
+	x = screen.get_width() - SIDEBAR_WIDTH - MARGIN
+	y = MARGIN
+	box_width = SIDEBAR_WIDTH
+
+	# --- Score ---
+	box_height = 90
+	content_x, content_y = draw_box(screen, font, x, y, box_width, box_height, "SCORE", (255, 255, 0))
+	score_surface = font.render(str(game.current_score), True, (255, 255, 255))
+	screen.blit(score_surface, (content_x, content_y))
+	y += box_height + BOX_GAP
+
+	# --- Lives ---
+	box_height = 90
+	content_x, content_y = draw_box(screen, font, x, y, box_width, box_height, "LIVES", (255, 0, 0))
+	heart_size = 26
+	for i in range(game.lives):
+		heart_x = content_x + heart_size // 2 + i * (heart_size + 10)
+		heart_y = content_y + heart_size // 2
+		draw_heart(screen, heart_x, heart_y, heart_size, filled=i < game.current_lives)
+	y += box_height + BOX_GAP
+
+	# --- Level ---
+	box_height = 90
+	content_x, content_y = draw_box(screen, font, x, y, box_width, box_height, "LEVEL", (0, 255, 255))
+	level_surface = font.render(str(level), True, (255, 255, 255))
+	screen.blit(level_surface, (content_x, content_y))
+	y += box_height + BOX_GAP
+
+	# --- Timer ---
+	box_height = 90
+	timer_low = seconds_remaining <= 10
+	label_color = TIMER_WARNING_COLOR if timer_low else (255, 165, 0)
+	content_x, content_y = draw_box(screen, font, x, y, box_width, box_height, "TIME", label_color)
+	minutes = max(0, seconds_remaining) // 60
+	secs = max(0, seconds_remaining) % 60
+	timer_text = f"{minutes}:{secs:02d}"
+	timer_color = TIMER_WARNING_COLOR if timer_low else (255, 255, 255)
+	timer_surface = font.render(timer_text, True, timer_color)
+	screen.blit(timer_surface, (content_x, content_y))
+
+
+def draw_game_screen(screen, game, hud_font, level, seconds_remaining):
 	tile, offset_x, offset_y = compute_layout(screen, game)
 	draw_maze(screen, game, tile, offset_x, offset_y)
 	draw_entities(screen, game, tile, offset_x, offset_y)
-	if hud_font is not None:
-		draw_hud(screen, hud_font, game)
+	draw_sidebar(screen, hud_font, game, level, seconds_remaining)
+

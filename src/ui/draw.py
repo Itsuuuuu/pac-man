@@ -113,7 +113,7 @@ def draw_highscores(screen, font, title_font, height, highscores):
 
 
 
-def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_value, cheat_index):
+def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_value, cheat_index, editing_cheat, cheat_input_buffer):
     title = title_font.render("Cheat", True, (255, 255, 0))
     title_rect = title.get_rect(center=(height // 2, 100))
     screen.blit(title, title_rect)
@@ -123,6 +123,9 @@ def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_val
             status = "ON" if cheat_states[cheat] else "OFF"
             color = (0, 255, 0) if cheat_states[cheat] else (255, 255, 255)
             label = f"{cheat}: {status}"
+        elif cheat == editing_cheat:
+            color = (0, 255, 0)
+            label = f"{cheat} : [{cheat_input_buffer}]"
         else:
             color = (255, 255, 255)
             label = f"{cheat} : < {cheat_value[cheat]} >"
@@ -137,24 +140,29 @@ def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_val
             y = text_rect.centery
             draw_pacman(screen, x, y, circle, mouth_angle=20)
 
-def draw_enter_name(screen, font, title_font, height, player_name):
+def draw_enter_name(screen, font, title_font, height, player_name, score):
     title = title_font.render("Game Over", True, (255, 0, 0))
     title_rect = title.get_rect(center=(height // 2, 150))
     screen.blit(title, title_rect)
 
-    scores = font.render("Ton score est de:", True, (255, 255, 255))
-    scores_rect = scores.get_rect(center=(height // 2, 300))
-    screen.blit(scores, scores_rect)
+    score_label = font.render("Your score is:", True, (255, 255, 255))
+    score_value = font.render(str(score), True, (0, 255, 0))
+
+    total_width = score_label.get_width() + 15 + score_value.get_width()
+    start_x = (height - total_width) // 2
+
+    scores_label_rect = score_label.get_rect(midleft=(start_x, 350))
+    screen.blit(score_label, scores_label_rect)
+
+    score_value_rect = score_value.get_rect(midleft=(scores_label_rect.right + 15, 350))
+    screen.blit(score_value, score_value_rect)
+
 
     prompt = font.render("Enter your name:", True, (255, 255, 0))
-    prompt_rect = prompt.get_rect(center=(height // 2, 425))
+    prompt_rect = prompt.get_rect(center=(height // 2, 500))
     screen.blit(prompt, prompt_rect)
 
     display_name = player_name if player_name else "_"
     name_surface = font.render(display_name, True, (0, 255, 0))
-    name_rect = name_surface.get_rect(center=(height // 2, 500))
+    name_rect = name_surface.get_rect(center=(height // 2, 550))
     screen.blit(name_surface, name_rect)
-
-    hint = font.render("Press ENTER to confirm", True, (150, 150, 150))
-    hint_rect = hint.get_rect(center=(height // 2, 600))
-    screen.blit(hint, hint_rect)
