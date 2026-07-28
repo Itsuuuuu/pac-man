@@ -166,3 +166,18 @@ def draw_enter_name(screen, font, title_font, height, player_name, score):
     name_surface = font.render(display_name, True, (0, 255, 0))
     name_rect = name_surface.get_rect(center=(height // 2, 550))
     screen.blit(name_surface, name_rect)
+
+def draw_pause(screen, font, title_font, height, pause_options, pause_index):
+    title = title_font.render("Pause", True, (255, 255, 0))
+    title_rect = title.get_rect(center=(height // 2, 100))
+    screen.blit(title, title_rect)
+
+    for i, option in enumerate(pause_options):
+        text = font.render(option, True, (255, 255, 255))
+        text_rect = text.get_rect(center=(height // 2, 250 + i * 100))
+        screen.blit(text, text_rect)
+        if i == pause_index:
+            circle = 15
+            x = text_rect.left - 50
+            y = text_rect.centery
+            draw_pacman(screen, x, y, circle, mouth_angle=20)

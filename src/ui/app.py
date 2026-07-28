@@ -6,7 +6,7 @@ from src.game_builder import build_game
 from src.tile import Pacgum
 from src.characters import Color
 from .utils import load_highscores, save_highscores
-from .draw import draw_menu, draw_highscores, draw_options, draw_cheat, draw_enter_name
+from .draw import draw_menu, draw_highscores, draw_options, draw_cheat, draw_enter_name, draw_pause
 from .draw_maze import draw_game_screen
 
 
@@ -62,6 +62,7 @@ class PacManApp:
 
 		self.options = ["Start Game", "Options", "High Scores", "Cheat", "Exit"]
 		self.options_options = ["Volume", "Dimensions", "Colors", "Back"]
+		self.pause_options = ["Resume", "Restart", "Volume", "Quit to Menu"]
 		# 4 resolutions standards (le labyrinthe s'adapte automatiquement a la fenetre)
 		self.screen_dimensions = [
 			(1024, 768),    # XGA (4:3)
@@ -74,6 +75,8 @@ class PacManApp:
 		self.menu_index = 0
 		self.options_index = 0
 		self.cheat_index = 0
+		self.pause_index = 0
+
 
 		self.screen = pygame.display.set_mode(self.screen_dimensions[self.dimension_index])
 		# Reference de centrage horizontal des menus = largeur de la fenetre
@@ -112,6 +115,24 @@ class PacManApp:
 	# ------------------------------------------------------------------ #
 	# Gestion des entrees
 	# ------------------------------------------------------------------ #
+
+	def handle_pause_events(self, event):
+		if event.key == pygame.K_UP:
+			if self.pause_index > 0:
+				self.pause_index -= 1
+		elif event.key == pygame.K_DOWN:
+			if self.pause_index != len(self.pause_options) - 1:
+				self.pause_index += 1
+		elif event.key == pygame.K_RETURN:
+			if self.pause_index == 0:
+				self.state = "game"
+			if self.pause_index == 1:
+				self.start_game()
+			elif self.pause_index == 2:
+				print("Volume option not implemented yet.")
+			elif self.pause_index == 3:
+				self.state = "menu"
+
 	def handle_menu_events(self, event):
 		if event.key == pygame.K_UP:
 			if self.menu_index > 0:
@@ -253,6 +274,10 @@ class PacManApp:
 					continue
 				if self.state == "menu":
 					self.running = False
+				elif self.state == "game":
+					self.state = "pause"
+				elif self.state == "pause":
+					self.state = "game"
 				else:
 					self.state = "menu"
 				continue
@@ -265,6 +290,8 @@ class PacManApp:
 				self.handle_cheat_events(event)
 			elif self.state == "game":
 				self.handle_game_events(event)
+			elif self.state == "pause":
+				self.handle_pause_events(event)
 			elif self.state == "enter_name":
 				self.handle_enter_name_events(event)
 
@@ -432,6 +459,11 @@ class PacManApp:
 				options_index=self.options_index,
 				screen_dimensions=self.screen_dimensions,
 				dimension_index=self.dimension_index,
+			)
+		elif self.state == "pause":
+			draw_pause(
+				self.screen, self.font, self.title_font, self.center_ref,
+				self.pause_options, self.pause_index
 			)
 		elif self.state == "cheat":
 			draw_cheat(
