@@ -137,22 +137,6 @@ def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_val
             y = text_rect.centery
             draw_pacman(screen, x, y, circle, mouth_angle=20)
 
-
-def draw_pause(screen, font, title_font, height, pause_options, pause_index):
-    title = title_font.render("Pause", True, (255, 255, 0))
-    title_rect = title.get_rect(center=(height // 2, 100))
-    screen.blit(title, title_rect)
-
-    for i, option in enumerate(pause_options):
-        text = font.render(option, True, (255, 255, 255))
-        text_rect = text.get_rect(center=(height // 2, 250 + i * 100))
-        screen.blit(text, text_rect)
-        if i == pause_index:
-            circle = 15
-            x = text_rect.left - 50
-            y = text_rect.centery
-            draw_pacman(screen, x, y, circle, mouth_angle=20)
-
 def draw_enter_name(screen, font, title_font, height, player_name):
     title = title_font.render("Game Over", True, (255, 0, 0))
     title_rect = title.get_rect(center=(height // 2, 150))
