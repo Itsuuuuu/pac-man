@@ -24,6 +24,10 @@ class Pacman:
 		self.y = y
 		self.spawn_x = x
 		self.spawn_y = y
+		# Case occupee avant le dernier pas : sert uniquement a l'affichage, qui
+		# interpole entre (prev_x, prev_y) et (x, y) pour lisser le deplacement.
+		self.prev_x = x
+		self.prev_y = y
 		self.direction = (0, 0)
 		self.invincible = invincible
 
@@ -36,17 +40,25 @@ class Pacman:
 
 	# Pour faire avancer le pacman sur la prochaine case
 	def move_to_next(self, direc_x: int, direc_y: int, tile_map: list[list[Tile]]):
+		# On part toujours de la case courante : si le pas est bloque, prev == courant
+		# et l'affichage n'interpole rien.
+		self.prev_x, self.prev_y = self.x, self.y
+
 		# Verification mur, si non, déplacement
 		if not self.can_move(direc_x, direc_y, tile_map):
 			return
 		self.x += direc_x
 		self.y += direc_y
 		self.direction = (direc_x, direc_y)
-	
+
 	# Si le Pacman se fait attraper par un ghost, il se fait tp au point de spawn
 	def back_to_spawn(self):
 		self.x = self.spawn_x
 		self.y = self.spawn_y
+		# Teleportation : prev suit, sinon l'affichage ferait glisser pacman
+		# a travers le labyrinthe jusqu'au spawn.
+		self.prev_x = self.spawn_x
+		self.prev_y = self.spawn_y
 		self.direction = (0, 0)
 	
 	# Si le Pacman passe sur un super pacgum, on passe is_invinsible en true pour quelques secondes
@@ -61,6 +73,9 @@ class Ghost:
 		self.y = y
 		self.spawn_x = x
 		self.spawn_y = y
+		# Voir Pacman.prev_x : uniquement pour l'interpolation d'affichage
+		self.prev_x = x
+		self.prev_y = y
 		self.current_zone = current_zone
 		self.color = color
 		self.is_dead = False
@@ -68,6 +83,15 @@ class Ghost:
 	# Doit devenir des petits yeux, et bfs vers la case de son spawn
 	def back_to_spawn(self):
 		self.is_dead = True
+
+	# Remise au spawn seche (perte de vie) : contrairement a back_to_spawn, le
+	# fantome ne rentre pas en marchant, il est repositionne d'un coup.
+	def respawn(self):
+		self.x = self.spawn_x
+		self.y = self.spawn_y
+		self.prev_x = self.spawn_x
+		self.prev_y = self.spawn_y
+		self.is_dead = False
 	
 	def run_to_spawn(self, width: int, height: int) -> tuple[int, int]:
 		if self.color == Color.RED:
@@ -123,6 +147,7 @@ class Ghost:
 
 	# On met en paramètre Blinky car Inky à besoin de connaître sa position pour bouger
 	def move(self, tile_map: list[list[Tile]], width: int, height: int, pacman: Pacman, blinky: 'Ghost'):
+		self.prev_x, self.prev_y = self.x, self.y
 		target = self.get_target(pacman, blinky, width, height)
 		has_wall = wall_from_tiles(tile_map)
 		next_step = bfs_next_step(has_wall, width, height, (self.x, self.y), target)

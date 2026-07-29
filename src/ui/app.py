@@ -2,26 +2,28 @@ import os
 
 import pygame
 
-from src.game_builder import build_game
-from src.tile import Pacgum
 from src.characters import Color
-from .utils import load_highscores, save_highscores
-from .draw import draw_menu, draw_highscores, draw_options, draw_cheat, draw_enter_name, draw_pause
+from src.game_builder import build_game, build_level
+from src.tile import Pacgum
+
+from .draw import (
+	draw_cheat,
+	draw_enter_name,
+	draw_highscores,
+	draw_menu,
+	draw_options,
+	draw_pause,
+)
 from .draw_maze import draw_game_screen
+from .utils import load_highscores, save_highscores
 
 
 # Chemin absolu vers les polices (robuste, independant du cwd)
 FONT_DIR = os.path.join(os.path.dirname(__file__), "font_pacman")
 
-# Duree d'invincibilite apres un super pacgum (ms)
-INVINCIBLE_MS = 6000
-
-# Vitesses : delai entre deux deplacements d'une case (ms).
+# Vitesses (delai entre deux deplacements d'une case, en ms) et duree d'invincibilite :
+# desormais definies par niveau dans la config, lues via self.game.params.
 # Plus la valeur est GRANDE, plus le personnage est LENT.
-PACMAN_MOVE_MS = 200
-GHOST_MOVE_MS = 260
-# Les fantomes ralentissent encore quand pacman est invincible (ils fuient)
-GHOST_FRIGHTENED_MOVE_MS = 380
 
 # Touches de direction -> vecteur de deplacement
 KEY_DIRECTIONS = {
@@ -309,18 +311,23 @@ class PacManApp:
 	# ------------------------------------------------------------------ #
 	# Logique de jeu
 	# ------------------------------------------------------------------ #
-	def start_game(self):
-		self.game = build_game(self.config_path)
+	def reset_level_state(self):
+		"""Remet a zero le pilotage d'un niveau : direction, buffer, timers, chrono."""
 		self.direction = (0, 0)
 		self.input_buffer.clear()
 		self.pacman_timer = 0
 		self.ghost_timer = 0
 		self.invincible_timer = 0
 		self.game_started = False
-		self.level_timer_ms = self.game.config.level_max_time * 1000
+		self.level_timer_ms = self.game.params.level_max_time * 1000
+
+	def start_game(self):
+		self.current_level = 1
+		self.game = build_game(self.config_path)
+		self.reset_level_state()
 		if self.cheat_states["Invincibility"]:
 			self.game.pacman.invincible = True
-			self.invincible_timer = INVINCIBLE_MS
+			self.invincible_timer = self.game.params.invincible_ms
 		if self.cheat_value["Point additions"]:
 			self.game.current_score += self.cheat_value["Point additions"]
 		self.state = "game"
@@ -334,8 +341,17 @@ class PacManApp:
 	def ghost_interval(self):
 		"""Delai courant entre deux deplacements de fantome (plus lent s'ils fuient)."""
 		if self.game.pacman.invincible:
-			return GHOST_FRIGHTENED_MOVE_MS
-		return GHOST_MOVE_MS
+			return self.game.params.ghost_frightened_move_ms
+		return self.game.params.ghost_move_ms
+
+	def move_progress(self):
+		"""Avancement (0..1) de pacman et des fantomes entre leur case precedente et
+		la courante. Sert uniquement a l'affichage, qui interpole pour rester fluide
+		alors que la logique n'avance que d'une case toutes les quelques dizaines de frames.
+		"""
+		pacman = min(1.0, self.pacman_timer / self.game.params.pacman_move_ms)
+		ghosts = min(1.0, self.ghost_timer / self.ghost_interval())
+		return pacman, ghosts
 
 	def step_pacman(self):
 		"""Fait avancer pacman d'une case : direction, deplacement, ramassage, collisions."""
@@ -362,15 +378,28 @@ class PacManApp:
 		elif tile.content == Pacgum.SUPERPACGUM:
 			game.current_score += game.config.points_per_super_pacgum
 			tile.content = Pacgum.NOTHING
-			pacman.invincible = True
-			self.invincible_timer = INVINCIBLE_MS
+			# invincible_ms a 0 : plus de mode fright a ce niveau, les points seulement
+			if game.params.invincible_ms > 0:
+				pacman.invincible = True
+				self.invincible_timer = game.params.invincible_ms
 
 		# Collisions : pacman a pu entrer dans un fantome
 		self.resolve_collisions()
 
-		# Victoire : plus aucun pacgum
+		# Niveau termine : plus aucun pacgum
 		if game.pacgum <= 0:
-			self.end_game(won=True)
+			self.next_level()
+
+	def next_level(self):
+		"""Passe au niveau suivant en conservant score et vies."""
+		self.current_level += 1
+		self.game = build_level(
+			self.game.config,
+			self.current_level,
+			self.game.current_score,
+			self.game.current_lives,
+		)
+		self.reset_level_state()
 
 	def step_ghosts(self):
 		"""Fait avancer tous les fantomes d'une case, puis verifie les collisions."""
@@ -403,9 +432,7 @@ class PacManApp:
 			game.current_lives -= 1
 		game.pacman.back_to_spawn()
 		for ghost in game.ghosts:
-			ghost.x = ghost.spawn_x
-			ghost.y = ghost.spawn_y
-			ghost.is_dead = False
+			ghost.respawn()
 		self.direction = (0, 0)
 		self.input_buffer.clear()
 		# Repart d'un rythme propre pour ne pas se refaire toucher instantanement
@@ -432,14 +459,15 @@ class PacManApp:
 		if self.game_started:
 			self.level_timer_ms -= dt
 			if self.level_timer_ms <= 0:
-				self.level_timer_ms = self.game.config.level_max_time * 1000
+				self.level_timer_ms = self.game.params.level_max_time * 1000
 				self.lose_life()
 				return
 
 		# Chaque entite avance a son propre rythme
+		pacman_interval = self.game.params.pacman_move_ms
 		self.pacman_timer += dt
-		while self.pacman_timer >= PACMAN_MOVE_MS and self.state == "game":
-			self.pacman_timer -= PACMAN_MOVE_MS
+		while self.pacman_timer >= pacman_interval and self.state == "game":
+			self.pacman_timer -= pacman_interval
 			self.step_pacman()
 
 		self.ghost_timer += dt
@@ -458,7 +486,11 @@ class PacManApp:
 			draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index, theme)
 		elif self.state == "game":
 			seconds_remaining = max(0, self.level_timer_ms) // 1000
-			draw_game_screen(self.screen, self.game, self.hud_font, self.current_level, seconds_remaining, theme)
+			pacman_progress, ghost_progress = self.move_progress()
+			draw_game_screen(
+				self.screen, self.game, self.hud_font, self.current_level, seconds_remaining, theme,
+				pacman_progress, ghost_progress,
+			)
 		elif self.state == "highscores":
 			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores[:10], theme)
 		elif self.state == "options":

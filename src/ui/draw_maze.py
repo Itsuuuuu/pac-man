@@ -73,13 +73,23 @@ def draw_maze(screen, game, tile, offset_x, offset_y, theme):
 				pygame.draw.circle(screen, GUM_COLOR, center, max(4, tile // 4))
 
 
-def draw_entities(screen, game, tile, offset_x, offset_y):
+def entity_pixels(entity, tile, offset_x, offset_y, progress):
+	"""Position a l'ecran d'une entite, interpolee entre sa case precedente et la courante.
+
+	La logique du jeu reste sur une grille d'entiers : seule cette fonction voit des
+	positions intermediaires. progress va de 0 (vient de quitter prev) a 1 (arrive).
+	"""
+	x = entity.prev_x + (entity.x - entity.prev_x) * progress
+	y = entity.prev_y + (entity.y - entity.prev_y) * progress
+	return round(offset_x + x * tile), round(offset_y + y * tile)
+
+
+def draw_entities(screen, game, tile, offset_x, offset_y, pacman_progress=1.0, ghost_progress=1.0):
 	# Frame d'animation basee sur le temps (change ~8x/seconde)
 	frame = (pygame.time.get_ticks() // 120) % 3
 
 	pacman = game.pacman
-	top_x = offset_x + pacman.x * tile
-	top_y = offset_y + pacman.y * tile
+	top_x, top_y = entity_pixels(pacman, tile, offset_x, offset_y, pacman_progress)
 	sprite = get_pacman_sprite(pacman.direction, frame, tile)
 	if sprite is not None:
 		screen.blit(sprite, (top_x, top_y))
@@ -88,8 +98,7 @@ def draw_entities(screen, game, tile, offset_x, offset_y):
 		pygame.draw.circle(screen, (255, 255, 0), center, tile // 2 - 2)
 
 	for ghost in game.ghosts:
-		gx = offset_x + ghost.x * tile
-		gy = offset_y + ghost.y * tile
+		gx, gy = entity_pixels(ghost, tile, offset_x, offset_y, ghost_progress)
 		frightened = pacman.invincible and not ghost.is_dead
 		sprite = get_ghost_sprite(ghost.color.value, tile, frightened)
 		if sprite is not None and not ghost.is_dead:
@@ -164,9 +173,9 @@ def draw_sidebar(screen, font, game, level, seconds_remaining):
 	screen.blit(timer_surface, (content_x, content_y))
 
 
-def draw_game_screen(screen, game, hud_font, level, seconds_remaining, theme):
+def draw_game_screen(screen, game, hud_font, level, seconds_remaining, theme, pacman_progress=1.0, ghost_progress=1.0):
 	tile, offset_x, offset_y = compute_layout(screen, game)
 	draw_maze(screen, game, tile, offset_x, offset_y, theme)
-	draw_entities(screen, game, tile, offset_x, offset_y)
+	draw_entities(screen, game, tile, offset_x, offset_y, pacman_progress, ghost_progress)
 	draw_sidebar(screen, hud_font, game, level, seconds_remaining)
 

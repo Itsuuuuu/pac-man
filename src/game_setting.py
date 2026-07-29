@@ -1,4 +1,4 @@
-from src.config_parser import GameConfig
+from src.config_parser import GameConfig, LevelConfig
 from src.tile import Tile, TileType, Pacgum
 from src.characters import Ghost, Color, Pacman
 import random
@@ -6,10 +6,11 @@ from collections import deque
 
 # Y mettre les règles du jeu / fonctionnement globalement
 class GameSetting:
-	def __init__(self, config: GameConfig, width: int, height: int, seed: int, lives: int,  current_score: int, maze_grid: list[list[int]], pacgum: int , is_finished: bool = False):
+	def __init__(self, config: GameConfig, params: LevelConfig, seed: int, lives: int, current_score: int, maze_grid: list[list[int]], is_finished: bool = False):
 		self.config = config
-		self.width = width
-		self.height = height
+		self.params = params
+		self.width = params.width
+		self.height = params.height
 		self.seed = seed
 		self.lives = lives
 		self.current_lives = lives
@@ -24,7 +25,7 @@ class GameSetting:
 
 		#Construction de la map
 		self.build_map(maze_grid)
-		
+
 		# Récupérer les cases
 		self.spawn_entities()
 
@@ -32,12 +33,14 @@ class GameSetting:
 		# list vide pour être remplie de list
 		self.tile_map = []
 
+		# Tirage reproductible : une graine par niveau, posee une seule fois
+		random.seed(self.seed)
+
 		# Parcours de la matrice
 		available_coords = []
 		for y, row in enumerate(maze_grid):
 			tile_row = []
 
-			random.seed(self.seed)
 			for x, tile in enumerate(row):
 				if tile == 15:
 					zone = TileType.RESERVED_CASE
@@ -64,7 +67,9 @@ class GameSetting:
 			corner_x, corner_y = corner
 			self.tile_map[corner_y][corner_x].content = Pacgum.SUPERPACGUM
 
-		choosen_coords = random.sample(available_coords, self.config.pacgum)
+		# Bornage : un niveau peut demander plus de pacgums qu'il n'y a de cases libres
+		gum_count = min(self.params.pacgum, len(available_coords))
+		choosen_coords = random.sample(available_coords, gum_count)
 		for x, y in choosen_coords:
 			self.tile_map[y][x].content = Pacgum.PACGUM
 			self.pacgum +=1

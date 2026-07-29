@@ -1,16 +1,31 @@
 {
 	"highscore_filename": "highscore.json",
+
 	"level": [
-        {"width": 20,
-		"height": 20}
-    ],
+		{"width": 20, "height": 20, "pacgum": 42, "level_max_time": 90,
+		 "pacman_move_ms": 200, "ghost_move_ms": 300, "ghost_frightened_move_ms": 420, "invincible_ms": 7000},
+
+		{"width": 22, "height": 22, "pacgum": 55, "level_max_time": 90,
+		 "pacman_move_ms": 190, "ghost_move_ms": 275, "ghost_frightened_move_ms": 400, "invincible_ms": 6000},
+
+		{"width": 24, "height": 24, "pacgum": 70, "level_max_time": 85,
+		 "pacman_move_ms": 180, "ghost_move_ms": 250, "ghost_frightened_move_ms": 380, "invincible_ms": 5000},
+
+		{"width": 26, "height": 26, "pacgum": 85, "level_max_time": 80,
+		 "pacman_move_ms": 175, "ghost_move_ms": 225, "ghost_frightened_move_ms": 350, "invincible_ms": 4000},
+
+		{"width": 28, "height": 28, "pacgum": 100, "level_max_time": 75,
+		 "pacman_move_ms": 170, "ghost_move_ms": 200, "ghost_frightened_move_ms": 320, "invincible_ms": 3000},
+
+		{"width": 30, "height": 30, "pacgum": 120, "level_max_time": 70,
+		 "pacman_move_ms": 165, "ghost_move_ms": 180, "ghost_frightened_move_ms": 300, "invincible_ms": 0}
+	],
+
 	"lives": 3,
-	"pacgum": 42,
 
 	"points_per_pacgum": 10,
 	"points_per_super_pacgum": 50,
 	"points_per_ghost": 200,
 
-	"seed": 42,
-	"level_max_time": 90
-	}
+	"seed": 42
+}
