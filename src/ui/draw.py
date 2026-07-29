@@ -1,42 +1,34 @@
 import pygame
 import math
 from .utils import ordinal
+from .assets import get_pacman_sprite
 
 
-def draw_pacman(screen, x, y, circle, mouth_angle=20):
-    pygame.draw.circle(screen, (255, 255, 0), (x, y), circle)
-    mouth_angle = 20
-    point_top = (
-        x + circle * math.cos(math.radians(-mouth_angle)) * 5,
-        y + circle * math.sin(math.radians(-mouth_angle)) * 5,
-    )
-    point_bottom = (
-        x + circle * math.cos(math.radians(mouth_angle)),
-        y + circle * math.sin(math.radians(mouth_angle)),
-    )
-    pygame.draw.polygon(screen, (0, 0, 0), [(x, y), point_top, point_bottom])
+def draw_cursor(screen, x, y, size=40):
+	frame = (pygame.time.get_ticks() // 120) % 3
+	sprite = get_pacman_sprite((1, 0), frame, size)
+	if sprite is not None:
+		rect = sprite.get_rect(center=(x, y))
+		screen.blit(sprite, rect)
+	else:
+		pygame.draw.circle(screen, (255, 255, 0), (x, y), size // 2)
 
 
-def draw_menu(screen, font, title_font, height, options, menu_index):
-    title_surface = title_font.render("Pac-Man", True, (255, 255, 0))
+def draw_menu(screen, font, title_font, height, options, menu_index, theme):
+    title_surface = title_font.render("Pac-Man", True, theme["title"])
     title_rect = title_surface.get_rect(center=(height // 2, 100))  #
     screen.blit(title_surface, title_rect)
 
     for i, option in enumerate(options):
-        text = font.render(option, True, (255, 0, 0))
+        color = theme["highlight"] if i == menu_index else theme["text"]
+        text = font.render(option, True, color)
         text_rect = text.get_rect(center=(height // 2, 250 + i * 100))  #
         screen.blit(text, text_rect)
         if i == menu_index:
             circle = 15
             x = text_rect.left - 50
             y = text_rect.centery
-            draw_pacman(screen, x, y, circle, mouth_angle=20)
-
-
-def draw_game(screen, title_font, height):
-    title = title_font.render("Game", True, (255, 255, 0))
-    title_rect = title.get_rect(center=(height // 2, 100))  #
-    screen.blit(title, title_rect)
+            draw_cursor(screen, x, y, size=40)
 
 
 def draw_options(
@@ -47,10 +39,12 @@ def draw_options(
         options_options,
         options_index,
         screen_dimensions,
-        dimension_index
-                 ):
+        dimension_index,
+        theme_name,
+        theme
+    ):
     global text
-    title = title_font.render("Options", True, (255, 255, 0))
+    title = title_font.render("Options", True, theme["title"])
     title_rect = title.get_rect(center=(height // 2, 100))  
     screen.blit(title, title_rect)
 
@@ -58,44 +52,42 @@ def draw_options(
         if i == 1:
             largeur, hauteur = screen_dimensions[dimension_index]
             texte = f"Dimensions : {largeur} x {hauteur}"
+        elif i == 2:
+            texte = f"Colors : {theme_name}"
         else:
             texte = options_options[i]
-        text = font.render(texte, True, (255, 255, 255))
+        color = theme["highlight"] if i == options_index else theme["text"]
+        text = font.render(texte, True, color)
         text_rect = text.get_rect(center=(height // 2, 300 + i * 100))
         screen.blit(text, text_rect)
         if i == options_index:
             circle = 15
             x = text_rect.left - 50
             y = text_rect.centery
-            draw_pacman(screen, x, y, circle, mouth_angle=20)
+            draw_cursor(screen, x, y, size=40)
 
 
-def draw_highscores(screen, font, title_font, height, highscores):
-    title = title_font.render("High Scores", True, (255, 255, 0))
+def draw_highscores(screen, font, title_font, height, highscores, theme):
+    title = title_font.render("High Scores", True, theme["title"])
     title_rect = title.get_rect(center=(height // 2, 100))
     screen.blit(title, title_rect)
 
     header_y = 220
-    rank_header = font.render("Rank", True, (250, 7, 7))
+    rank_header = font.render("Rank", True, theme["title"])
     screen.blit(rank_header, rank_header.get_rect(center=(height // 4, header_y)))
 
-    score_header = font.render("Name", True, (250, 7, 7))
+    score_header = font.render("Name", True, theme["title"])
     screen.blit(score_header, score_header.get_rect(center=(height // 2, header_y)))
 
-    name_header = font.render("Score", True, (250, 7, 7))
+    name_header = font.render("Score", True, theme["title"])
     screen.blit(name_header, name_header.get_rect(center=(height // 1.3, header_y)))
 
-    row_colors = [
-        (255, 111, 97), (0, 119, 182), (129, 217, 178), (147, 112, 219),
-        (230, 179, 41), (255, 0, 122), (25, 42, 86), (204, 85, 0),
-        (112, 128, 144), (64, 224, 208),
-	]
     
     for i, entry in enumerate(highscores):
         pseudo = entry["pseudo"]
         score = entry["score"]
         y = 280 + i * 50
-        color = row_colors[i % len(row_colors)]
+        color = theme["highlight"] if i == 0 else theme["text"]
 
 
         rank_text = font.render(ordinal(i + 1), True, color)
@@ -113,21 +105,33 @@ def draw_highscores(screen, font, title_font, height, highscores):
 
 
 
-def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_value, cheat_index, editing_cheat, cheat_input_buffer):
-    title = title_font.render("Cheat", True, (255, 255, 0))
+def draw_cheat(
+        screen,
+        font,
+        title_font,
+        height,
+        cheats,
+        cheat_states,
+        cheat_value,
+        cheat_index,
+        editing_cheat,
+        cheat_input_buffer,
+        theme
+    ):
+    title = title_font.render("Cheat", True, theme["title"])
     title_rect = title.get_rect(center=(height // 2, 100))
     screen.blit(title, title_rect)
 
     for i, cheat in enumerate(cheats):
         if cheat in cheat_states:
             status = "ON" if cheat_states[cheat] else "OFF"
-            color = (0, 255, 0) if cheat_states[cheat] else (255, 255, 255)
+            color = theme["highlight"] if cheat_states[cheat] else theme["text"]
             label = f"{cheat}: {status}"
         elif cheat == editing_cheat:
-            color = (0, 255, 0)
+            color = theme["highlight"]
             label = f"{cheat} : [{cheat_input_buffer}]"
         else:
-            color = (255, 255, 255)
+            color = theme["text"]
             label = f"{cheat} : < {cheat_value[cheat]} >"
         
         text = font.render(label, True, color)
@@ -138,7 +142,7 @@ def draw_cheat(screen, font, title_font, height, cheats, cheat_states, cheat_val
             circle = 15
             x = text_rect.left - 50
             y = text_rect.centery
-            draw_pacman(screen, x, y, circle, mouth_angle=20)
+            draw_cursor(screen, x, y, size=40)
 
 def draw_enter_name(screen, font, title_font, height, player_name, score):
     title = title_font.render("Game Over", True, (255, 0, 0))
@@ -180,4 +184,4 @@ def draw_pause(screen, font, title_font, height, pause_options, pause_index):
             circle = 15
             x = text_rect.left - 50
             y = text_rect.centery
-            draw_pacman(screen, x, y, circle, mouth_angle=20)
+            draw_cursor(screen, x, y, size=40)

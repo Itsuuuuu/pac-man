@@ -58,5 +58,13 @@
     {
         "pseudo": "test",
         "score": 1200
+    },
+    {
+        "pseudo": "cheval",
+        "score": 1050
+    },
+    {
+        "pseudo": "chad",
+        "score": 5095
     }
 ]

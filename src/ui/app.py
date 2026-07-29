@@ -31,6 +31,13 @@ KEY_DIRECTIONS = {
 	pygame.K_RIGHT: (1, 0),
 }
 
+THEMES = [
+	{"name": "Classic", "background": (0, 0, 0), "text": (255, 0, 0), "highlight": (0, 255, 0), "title": (255, 255, 0)},
+	{"name": "Ocean", "background": (5, 10, 40), "text": (100, 200, 255), "highlight": (0, 255, 200), "title": (200, 230, 255)},
+	{"name": "Sunset", "background": (40, 10, 20), "text": (255, 140, 60), "highlight": (255, 220, 80), "title": (255, 90, 90)},
+	{"name": "Mono", "background": (15, 15, 15), "text": (220, 220, 220), "highlight": (255, 255, 0), "title": (180, 180, 180)},
+]
+
 # Maximum de charactere pour un pseudo
 MAX_NAME_LENGTH = 10
 
@@ -112,6 +119,8 @@ class PacManApp:
 		self.current_level = 1
 		self.level_timer_ms = 0
 
+		self.theme_index = 0
+
 	# ------------------------------------------------------------------ #
 	# Gestion des entrees
 	# ------------------------------------------------------------------ #
@@ -164,6 +173,8 @@ class PacManApp:
 				self.dimension_index = (self.dimension_index + 1) % len(self.screen_dimensions)
 				self.screen = pygame.display.set_mode(self.screen_dimensions[self.dimension_index])
 				self.center_ref = self.screen_dimensions[self.dimension_index][0]
+			elif self.options_index == 2:
+				self.theme_index = (self.theme_index + 1) % len(THEMES)
 			elif self.options_index == 3:
 				self.state = "menu"
 
@@ -440,15 +451,16 @@ class PacManApp:
 	# Rendu
 	# ------------------------------------------------------------------ #
 	def render(self):
-		self.screen.fill((0, 0, 0))
+		theme = THEMES[self.theme_index]
+		self.screen.fill(theme["background"])
 
 		if self.state == "menu":
-			draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index)
+			draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index, theme)
 		elif self.state == "game":
 			seconds_remaining = max(0, self.level_timer_ms) // 1000
 			draw_game_screen(self.screen, self.game, self.hud_font, self.current_level, seconds_remaining)
 		elif self.state == "highscores":
-			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores[:10])
+			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores[:10], theme)
 		elif self.state == "options":
 			draw_options(
 				screen=self.screen,
@@ -459,6 +471,8 @@ class PacManApp:
 				options_index=self.options_index,
 				screen_dimensions=self.screen_dimensions,
 				dimension_index=self.dimension_index,
+				theme_name=theme["name"],
+				theme=theme
 			)
 		elif self.state == "pause":
 			draw_pause(
@@ -469,7 +483,7 @@ class PacManApp:
 			draw_cheat(
 				self.screen, self.font, self.title_font, self.center_ref,
 				self.cheats, self.cheat_states, self.cheat_value, self.cheat_index,
-				self.editing_cheat, self.cheat_input_buffer,
+				self.editing_cheat, self.cheat_input_buffer, theme
 			)
 		elif self.state == "enter_name":
 			draw_enter_name(

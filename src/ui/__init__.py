@@ -6,7 +6,6 @@ from .draw import (
     draw_options,
     draw_highscores,
     draw_cheat,
-    draw_game,
 )
 from .draw_maze import draw_game_screen
 from .assets import get_ghost_sprite, get_pacman_sprite
@@ -18,7 +17,6 @@ __all__ = [
     "draw_options",
     "draw_highscores",
     "draw_cheat",
-    "draw_game",
     "draw_game_screen",
     "get_ghost_sprite",
     "get_pacman_sprite",
