@@ -32,10 +32,10 @@ KEY_DIRECTIONS = {
 }
 
 THEMES = [
-	{"name": "Classic", "background": (0, 0, 0), "text": (255, 0, 0), "highlight": (0, 255, 0), "title": (255, 255, 0)},
-	{"name": "Ocean", "background": (5, 10, 40), "text": (100, 200, 255), "highlight": (0, 255, 200), "title": (200, 230, 255)},
-	{"name": "Sunset", "background": (40, 10, 20), "text": (255, 140, 60), "highlight": (255, 220, 80), "title": (255, 90, 90)},
-	{"name": "Mono", "background": (15, 15, 15), "text": (220, 220, 220), "highlight": (255, 255, 0), "title": (180, 180, 180)},
+	{"name": "Classic", "background": (0, 0, 0), "text": (255, 0, 0), "highlight": (0, 255, 0), "title": (255, 255, 0), "wall": (0, 0, 255)},
+	{"name": "Ocean", "background": (5, 10, 40), "text": (100, 200, 255), "highlight": (0, 255, 200), "title": (200, 230, 255), "wall": (0, 255, 200)},
+	{"name": "Sunset", "background": (40, 10, 20), "text": (255, 140, 60), "highlight": (255, 220, 80), "title": (255, 90, 90), "wall": (255, 140, 60)},
+	{"name": "Mono", "background": (15, 15, 15), "text": (220, 220, 220), "highlight": (255, 255, 0), "title": (180, 180, 180), "wall": (150, 150, 150)},
 ]
 
 # Maximum de charactere pour un pseudo
@@ -458,7 +458,7 @@ class PacManApp:
 			draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index, theme)
 		elif self.state == "game":
 			seconds_remaining = max(0, self.level_timer_ms) // 1000
-			draw_game_screen(self.screen, self.game, self.hud_font, self.current_level, seconds_remaining)
+			draw_game_screen(self.screen, self.game, self.hud_font, self.current_level, seconds_remaining, theme)
 		elif self.state == "highscores":
 			draw_highscores(self.screen, self.font, self.title_font, self.center_ref, self.highscores[:10], theme)
 		elif self.state == "options":

@@ -41,9 +41,10 @@ def compute_layout(screen, game):
 	return tile, offset_x, offset_y
 
 
-def draw_maze(screen, game, tile, offset_x, offset_y):
+def draw_maze(screen, game, tile, offset_x, offset_y, theme):
 	line_width = max(2, tile // 8)
 	cap_radius = line_width // 2
+	wall_color = theme["wall"]
 
 	for row in game.tile_map:
 		for t in row:
@@ -61,9 +62,9 @@ def draw_maze(screen, game, tile, offset_x, offset_y):
 				segments.append(((px, py), (px, py + tile)))
 
 			for start, end in segments:
-				pygame.draw.line(screen, WALL_COLOR, start, end, line_width)
-				pygame.draw.circle(screen, WALL_COLOR, start, cap_radius)
-				pygame.draw.circle(screen, WALL_COLOR, end, cap_radius)
+				pygame.draw.line(screen, wall_color, start, end, line_width)
+				pygame.draw.circle(screen, wall_color, start, cap_radius)
+				pygame.draw.circle(screen, wall_color, end, cap_radius)
 
 			center = (px + tile // 2, py + tile // 2)
 			if t.content == Pacgum.PACGUM:
@@ -163,9 +164,9 @@ def draw_sidebar(screen, font, game, level, seconds_remaining):
 	screen.blit(timer_surface, (content_x, content_y))
 
 
-def draw_game_screen(screen, game, hud_font, level, seconds_remaining):
+def draw_game_screen(screen, game, hud_font, level, seconds_remaining, theme):
 	tile, offset_x, offset_y = compute_layout(screen, game)
-	draw_maze(screen, game, tile, offset_x, offset_y)
+	draw_maze(screen, game, tile, offset_x, offset_y, theme)
 	draw_entities(screen, game, tile, offset_x, offset_y)
 	draw_sidebar(screen, hud_font, game, level, seconds_remaining)
 
