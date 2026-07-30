@@ -169,13 +169,13 @@ class PacManApp:
 			if self.options_index != len(self.options_options) - 1:
 				self.options_index += 1
 		elif event.key == pygame.K_RETURN:
-			if self.options_index == 1:
+			if self.options_index == 0:
 				self.dimension_index = (self.dimension_index + 1) % len(self.screen_dimensions)
 				self.screen = pygame.display.set_mode(self.screen_dimensions[self.dimension_index])
 				self.center_ref = self.screen_dimensions[self.dimension_index][0]
-			elif self.options_index == 2:
+			elif self.options_index == 1:
 				self.theme_index = (self.theme_index + 1) % len(THEMES)
-			elif self.options_index == 3:
+			elif self.options_index == 2:
 				self.state = "menu"
 
 	def handle_cheat_events(self, event):

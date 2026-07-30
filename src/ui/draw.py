@@ -49,10 +49,10 @@ def draw_options(
     screen.blit(title, title_rect)
 
     for i in range(len(options_options)):
-        if i == 1:
+        if i == 0:
             largeur, hauteur = screen_dimensions[dimension_index]
             texte = f"Dimensions : {largeur} x {hauteur}"
-        elif i == 2:
+        elif i == 1:
             texte = f"Colors : {theme_name}"
         else:
             texte = options_options[i]
