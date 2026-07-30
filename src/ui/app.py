@@ -70,8 +70,8 @@ class PacManApp:
 		self.cheat_max = {"Level skips": 42, "Point additions": 9999}
 
 		self.options = ["Start Game", "Options", "High Scores", "Cheat", "Exit"]
-		self.options_options = ["Volume", "Dimensions", "Colors", "Back"]
-		self.pause_options = ["Resume", "Restart", "Volume", "Quit to Menu"]
+		self.options_options = ["Dimensions", "Colors", "Back"]
+		self.pause_options = ["Resume", "Restart", "Quit to Menu"]
 		# 4 resolutions standards (le labyrinthe s'adapte automatiquement a la fenetre)
 		self.screen_dimensions = [
 			(1024, 768),    # XGA (4:3)
@@ -140,8 +140,6 @@ class PacManApp:
 			if self.pause_index == 1:
 				self.start_game()
 			elif self.pause_index == 2:
-				print("Volume option not implemented yet.")
-			elif self.pause_index == 3:
 				self.state = "menu"
 
 	def handle_menu_events(self, event):
@@ -528,6 +526,8 @@ class PacManApp:
 	# Boucle principale
 	# ------------------------------------------------------------------ #
 	def run(self):
+		pygame.mixer.music.load("./Assets/sound/start.wav")
+		pygame.mixer.music.play()
 		while self.running:
 			dt = self.clock.tick(60)
 			self.process_events()
