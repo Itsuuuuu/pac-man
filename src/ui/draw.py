@@ -18,17 +18,20 @@ def draw_menu(screen, font, title_font, height, options, menu_index, theme):
     title_surface = title_font.render("Pac-Man", True, theme["title"])
     title_rect = title_surface.get_rect(center=(height // 2, 100))  #
     screen.blit(title_surface, title_rect)
-
+    option_rects = []
     for i, option in enumerate(options):
         color = theme["highlight"] if i == menu_index else theme["text"]
         text = font.render(option, True, color)
         text_rect = text.get_rect(center=(height // 2, 250 + i * 100))  #
         screen.blit(text, text_rect)
+        option_rects.append(text_rect)
         if i == menu_index:
             circle = 15
             x = text_rect.left - 50
             y = text_rect.centery
             draw_cursor(screen, x, y, size=40)
+
+    return option_rects
 
 
 def draw_options(

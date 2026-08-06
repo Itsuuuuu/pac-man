@@ -56,6 +56,14 @@ class PacManApp:
 		pygame.init()
 		pygame.display.set_caption("Pac-Man")
 
+		# Charger le son de lancement (Assets/sound/start.wav)
+		ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Assets"))
+		try:
+			start_path = os.path.join(ASSETS_DIR, "sound", "start.wav")
+			self.start_sound = pygame.mixer.Sound(start_path)
+		except Exception:
+			self.start_sound = None
+
 		# Menus
 		self.cheats = [
 			"Invincibility", "Infinite lives", "Edible ghosts",
@@ -100,6 +108,9 @@ class PacManApp:
 
 		self.state = "menu"
 		self.running = True
+
+		# Suivi d'etat pour detecter transitions (utile pour arreter les sons)
+		self.prev_state = None
 
 		# Etat de la partie en cours
 		self.game = None
@@ -275,6 +286,36 @@ class PacManApp:
 				self.running = False
 				continue
 
+			# Souris : survol et click pour le menu
+			if event.type == pygame.MOUSEMOTION:
+				if self.state == "menu" and getattr(self, "menu_item_rects", None):
+					mx, my = event.pos
+					for i, rect in enumerate(self.menu_item_rects):
+						if rect.collidepoint((mx, my)):
+							self.menu_index = i
+							break
+					
+				continue
+
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				if event.button == 1 and self.state == "menu" and getattr(self, "menu_item_rects", None):
+					mx, my = event.pos
+					for i, rect in enumerate(self.menu_item_rects):
+						if rect.collidepoint((mx, my)):
+							# Reproduit l'action du clavier pour l'option cliquée
+							if i == 0:
+								self.start_game()
+							elif i == 1:
+								self.state = "options"
+							elif i == 2:
+								self.state = "highscores"
+							elif i == 3:
+								self.state = "cheat"
+							elif i == 4:
+								self.running = False
+							break
+				continue
+
 			if event.type != pygame.KEYDOWN:
 				continue
 
@@ -328,6 +369,13 @@ class PacManApp:
 			self.invincible_timer = self.game.params.invincible_ms
 		if self.cheat_value["Point additions"]:
 			self.game.current_score += self.cheat_value["Point additions"]
+		# Jouer le son de lancement si disponible (uniquement via le menu Start Game)
+		try:
+			if self.start_sound is not None:
+				self.start_sound.play()
+		except Exception:
+			# Ne pas faire crasher le jeu si le son echoue
+			pass
 		self.state = "game"
 
 	def find_blinky(self):
@@ -481,7 +529,8 @@ class PacManApp:
 		self.screen.fill(theme["background"])
 
 		if self.state == "menu":
-			draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index, theme)
+			# draw_menu returns option rects so we can detect mouse clicks
+			self.menu_item_rects = draw_menu(self.screen, self.font, self.title_font, self.center_ref, self.options, self.menu_index, theme)
 		elif self.state == "game":
 			seconds_remaining = max(0, self.level_timer_ms) // 1000
 			pacman_progress, ghost_progress = self.move_progress()
@@ -526,11 +575,21 @@ class PacManApp:
 	# Boucle principale
 	# ------------------------------------------------------------------ #
 	def run(self):
-		pygame.mixer.music.load("./Assets/sound/start.wav")
-		pygame.mixer.music.play()
+		# Ne pas lancer la musique automatiquement au demarrage
+		# La lecture se fera explicitement dans `start_game()`
 		while self.running:
 			dt = self.clock.tick(60)
 			self.process_events()
+			# Detecter transitions d'etat pour arreter les sons si on quitte le jeu
+			if self.prev_state != self.state:
+				# si on quitte l'etat 'game', stopper le son de demarrage
+				if self.prev_state == "game" and self.state != "game":
+					try:
+						if hasattr(self, "start_sound") and self.start_sound is not None:
+							self.start_sound.stop()
+					except Exception:
+						pass
+				self.prev_state = self.state
 			if self.state == "game" and self.game is not None:
 				self.update_game(dt)
 			elif self.state == "cheat":
