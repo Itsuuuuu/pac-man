@@ -51,7 +51,10 @@ class Pacman:
 		self.y += direc_y
 		self.direction = (direc_x, direc_y)
 
-	# Si le Pacman se fait attraper par un ghost, il se fait tp au point de spawn
+	def fear_ghost(self):
+		return self.invincible
+
+	# Si le Pacman se fait attraper par un ghost, il se retourne au point de spawn
 	def back_to_spawn(self):
 		self.x = self.spawn_x
 		self.y = self.spawn_y
@@ -79,6 +82,7 @@ class Ghost:
 		self.current_zone = current_zone
 		self.color = color
 		self.is_dead = False
+		self.frightened_target: tuple[int, int] | None = None
 
 	# Doit devenir des petits yeux, et bfs vers la case de son spawn
 	def back_to_spawn(self):
@@ -106,6 +110,16 @@ class Ghost:
 	# Empeche qu'une coordonnée sorte de la map
 	def block(self, val: int, min_val: int, max_val: int) -> int:
 		return max(min_val, min(val, max_val))
+
+	def random_frightened_target(self, width: int, height: int) -> tuple[int, int]:
+		return (random.randint(1, width - 2), random.randint(1, height - 2))
+
+	def get_frightened_target(self, width: int, height: int) -> tuple[int, int]:
+		if self.frightened_target is None or (self.x, self.y) == self.frightened_target:
+			self.frightened_target = self.random_frightened_target(width, height)
+			while self.frightened_target == (self.x, self.y) and width > 2 and height > 2:
+				self.frightened_target = self.random_frightened_target(width, height)
+		return self.frightened_target
 	
 	def get_target(self, pacman: Pacman, blinky: 'Ghost', width: int, height: int) -> tuple[int, int]:
 		if self.is_dead:
@@ -113,7 +127,9 @@ class Ghost:
 		
 		# Si pacman est invinsible, les ghosts fuient dans leurs coin
 		if pacman.invincible:
-			return self.run_to_spawn(width, height)
+			return self.get_frightened_target(width, height)
+
+		self.frightened_target = None
 		
 		# Cible pacman
 		if self.color == Color.RED:

@@ -100,8 +100,8 @@ def draw_entities(screen, game, tile, offset_x, offset_y, pacman_progress=1.0, g
 	for ghost in game.ghosts:
 		gx, gy = entity_pixels(ghost, tile, offset_x, offset_y, ghost_progress)
 		frightened = pacman.invincible and not ghost.is_dead
-		sprite = get_ghost_sprite(ghost.color.value, tile, frightened)
-		if sprite is not None and not ghost.is_dead:
+		sprite = get_ghost_sprite(ghost.color.value, tile, frightened, ghost.is_dead)
+		if sprite is not None:
 			screen.blit(sprite, (gx, gy))
 		else:
 			# Fantome mort (yeux qui rentrent au spawn) ou fallback couleur

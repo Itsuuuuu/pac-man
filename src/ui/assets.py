@@ -13,6 +13,7 @@ GHOST_FILES = {
 	"blue": "ghosts/inky.png",
 	"orange": "ghosts/clyde.png",
 	"frightened": "ghosts/blue_ghost.png",
+	"dead": "ghosts/eyes.png"
 }
 
 # Dossier de sprites de pacman selon sa direction
@@ -39,8 +40,13 @@ def _load(path: str, size: int):
 	return _cache[key]
 
 
-def get_ghost_sprite(color_value: str, size: int, frightened: bool = False):
-	name = "frightened" if frightened else color_value
+def get_ghost_sprite(color_value: str, size: int, frightened: bool = False, dead: bool = False):
+	if dead:
+		name = "dead"
+	elif frightened:
+		name = "frightened"
+	else:
+		name = color_value
 	return _load(GHOST_FILES.get(name, GHOST_FILES["red"]), size)
 
 

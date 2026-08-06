@@ -78,5 +78,17 @@
     {
         "pseudo": "htrhre",
         "score": 1840
+    },
+    {
+        "pseudo": "PLAYER",
+        "score": 640
+    },
+    {
+        "pseudo": "test",
+        "score": 1660
+    },
+    {
+        "pseudo": "PLAYER",
+        "score": 660
     }
 ]
