@@ -2,6 +2,7 @@
 
 install:
 	uv sync
+	python3 -m venv .venv
 
 run:
 	uv run python -m src config.json
