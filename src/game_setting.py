@@ -3,6 +3,15 @@ from src.tile import Tile, TileType, Pacgum
 from src.characters import Ghost, Color, Pacman
 import random
 from collections import deque
+from typing import NamedTuple
+
+
+class GhostSpawn(NamedTuple):
+    """Position de depart d'un fantome : un coin de la map et un decalage."""
+
+    color: Color
+    corner: tuple[int, int]
+    offset: tuple[int, int]
 
 
 # Y mettre les règles du jeu / fonctionnement globalement
@@ -16,7 +25,7 @@ class GameSetting:
         current_score: int,
         maze_grid: list[list[int]],
         is_finished: bool = False,
-    ):
+    ) -> None:
         self.config = config
         self.params = params
         self.width = params.width
@@ -26,12 +35,12 @@ class GameSetting:
         self.current_lives = lives
         self.current_score = current_score
         self.pacgum = 0
-        self.pacman = None
+        self.pacman: Pacman
         self.is_finished = is_finished
         self.ghosts: list[Ghost] = []
 
         # Liste vierge pour recevoir le Tile de la map
-        self.tile_map = []
+        self.tile_map: list[list[Tile]] = []
 
         # Construction de la map
         self.build_map(maze_grid)
@@ -39,7 +48,7 @@ class GameSetting:
         # Récupérer les cases
         self.spawn_entities()
 
-    def build_map(self, maze_grid: list[list[int]]):
+    def build_map(self, maze_grid: list[list[int]]) -> list[list[Tile]]:
         # list vide pour être remplie de list
         self.tile_map = []
 
@@ -47,12 +56,12 @@ class GameSetting:
         random.seed(self.seed)
 
         # Parcours de la matrice
-        available_coords = []
+        available_coords: list[tuple[int, int]] = []
         for y, row in enumerate(maze_grid):
-            tile_row = []
+            tile_row: list[Tile] = []
 
-            for x, tile in enumerate(row):
-                if tile == 15:
+            for x, walls_value in enumerate(row):
+                if walls_value == 15:
                     zone = TileType.RESERVED_CASE
                     gum = Pacgum.NOTHING
                 else:
@@ -60,12 +69,12 @@ class GameSetting:
                     gum = Pacgum.NOTHING
                     available_coords.append((x, y))
 
-                tile = Tile(x=x, y=y, walls_value=tile,
+                tile = Tile(x=x, y=y, walls_value=walls_value,
                             zone_type=zone, content=gum)
                 tile_row.append(tile)
             self.tile_map.append(tile_row)
 
-        corners = [
+        corners: list[tuple[int, int]] = [
             (0, 0),
             (self.width - 1, 0),
             (self.width - 1, self.height - 1),
@@ -111,29 +120,22 @@ class GameSetting:
                         queue.append((new_x, new_y))
         return start_x, start_y
 
-    def spawn_entities(self):
+    def spawn_entities(self) -> None:
         self.ghosts = []
 
         # Définition des 4 coins avec décalage pour les ghosts
         ghosts_spawn = [
-            {"color": Color.RED,
-             "corner": (1, 0),
-             "offset": (0, 0)},
-            {"color": Color.PINK,
-             "corner": (self.width - 1, 0),
-             "offset": (0, 1)},
-            {"color": Color.BLUE,
-             "corner": (self.width - 1, self.height - 1),
-             "offset": (-1, 0)},
-            {"color": Color.ORANGE,
-             "corner": (0, self.height - 1),
-             "offset": (0, -1)},
+            GhostSpawn(Color.RED, (1, 0), (0, 0)),
+            GhostSpawn(Color.PINK, (self.width - 1, 0), (0, 1)),
+            GhostSpawn(Color.BLUE,
+                       (self.width - 1, self.height - 1), (-1, 0)),
+            GhostSpawn(Color.ORANGE, (0, self.height - 1), (0, -1)),
         ]
 
         # Placer les ghosts dynamiquement
         for spawn in ghosts_spawn:
-            corner_x, corner_y = spawn["corner"]
-            offset_x, offset_y = spawn["offset"]
+            corner_x, corner_y = spawn.corner
+            offset_x, offset_y = spawn.offset
 
             spawn_x = corner_x + offset_x
             spawn_y = corner_y + offset_y
@@ -147,7 +149,7 @@ class GameSetting:
                 self.pacgum -= 1
 
             # Créer et ajouter le fantomes
-            new_ghost = Ghost(x=spawn_x, y=spawn_y, color=spawn["color"])
+            new_ghost = Ghost(x=spawn_x, y=spawn_y, color=spawn.color)
             self.ghosts.append(new_ghost)
 
         # Placer le pacman au centre
@@ -162,9 +164,9 @@ class GameSetting:
             self.pacgum -= 1
         self.pacman = Pacman(x=spawn_x, y=spawn_y)
 
-    def update(self, direc_x: int, direc_y: int):
+    def update(self, direc_x: int, direc_y: int) -> None:
         self.pacman.move_to_next(direc_x, direc_y, self.tile_map)
-        blinky = None
+        blinky: Ghost | None = None
 
         # Trouver Blinky
         for ghost in self.ghosts:

@@ -4,7 +4,7 @@ from src.ghost_algo import bfs_next_step, wall_from_tiles
 import random
 
 # Correspondance direction (dx, dy) -> bit de mur (N=1, E=2, S=4, W=8)
-DIRECTION_FLAGS = {
+DIRECTION_FLAGS: dict[tuple[int, int], int] = {
     (0, -1): 1,
     (1, 0): 2,
     (0, 1): 4,
@@ -20,22 +20,21 @@ class Color(Enum):
 
 
 class Pacman:
-    def __init__(self, x: int, y: int, invincible: bool = False):
+    def __init__(self, x: int, y: int, invincible: bool = False) -> None:
         self.x = x
         self.y = y
         self.spawn_x = x
         self.spawn_y = y
-        # Case occupee avant le dernier pas : sert uniquement a l'affichage,
-        # qui
-        # interpole entre (prev_x, prev_y) et (x, y) pour lisser le
-        # deplacement.
+        # Case occupee avant le dernier pas : sert uniquement a
+        # l'affichage, qui interpole entre (prev_x, prev_y) et (x, y)
+        # pour lisser le deplacement.
         self.prev_x = x
         self.prev_y = y
-        self.direction = (0, 0)
+        self.direction: tuple[int, int] = (0, 0)
         self.invincible = invincible
 
-    # Indique si pacman peut avancer dans cette direction (aucun mur sur la
-    # case courante)
+    # Indique si pacman peut avancer dans cette direction
+    # (aucun mur sur la case courante)
     def can_move(
         self,
         direc_x: int,
@@ -53,10 +52,9 @@ class Pacman:
         direc_x: int,
         direc_y: int,
         tile_map: list[list[Tile]],
-    ):
-        # On part toujours de la case courante : si le pas est bloque, prev ==
-        # courant
-        # et l'affichage n'interpole rien.
+    ) -> None:
+        # On part toujours de la case courante : si le pas est bloque,
+        # prev == courant et l'affichage n'interpole rien.
         self.prev_x, self.prev_y = self.x, self.y
 
         # Verification mur, si non, déplacement
@@ -66,12 +64,11 @@ class Pacman:
         self.y += direc_y
         self.direction = (direc_x, direc_y)
 
-    def fear_ghost(self):
+    def fear_ghost(self) -> bool:
         return self.invincible
 
-    # Si le Pacman se fait attraper par un ghost, il se retourne au point de
-    # spawn
-    def back_to_spawn(self):
+    # Si le Pacman se fait attraper par un ghost, il retourne au spawn
+    def back_to_spawn(self) -> None:
         self.x = self.spawn_x
         self.y = self.spawn_y
         # Teleportation : prev suit, sinon l'affichage ferait glisser pacman
@@ -80,9 +77,9 @@ class Pacman:
         self.prev_y = self.spawn_y
         self.direction = (0, 0)
 
-    # Si le Pacman passe sur un super pacgum, on passe is_invinsible en true
-    # pour quelques secondes
-    def is_invincible(self):
+    # Si le Pacman passe sur un super pacgum, on passe is_invinsible
+    # en true pour quelques secondes
+    def is_invincible(self) -> bool:
         # mettre un timer
         return self.invincible
 
@@ -94,7 +91,7 @@ class Ghost:
         y: int,
         current_zone: TileType = TileType.SPAWN,
         color: Color = Color.RED,
-    ):
+    ) -> None:
         self.x = x
         self.y = y
         self.spawn_x = x
@@ -108,12 +105,12 @@ class Ghost:
         self.frightened_target: tuple[int, int] | None = None
 
     # Doit devenir des petits yeux, et bfs vers la case de son spawn
-    def back_to_spawn(self):
+    def back_to_spawn(self) -> None:
         self.is_dead = True
 
     # Remise au spawn seche (perte de vie) : contrairement a back_to_spawn, le
     # fantome ne rentre pas en marchant, il est repositionne d'un coup.
-    def respawn(self):
+    def respawn(self) -> None:
         self.x = self.spawn_x
         self.y = self.spawn_y
         self.prev_x = self.spawn_x
@@ -155,7 +152,7 @@ class Ghost:
     def get_target(
         self,
         pacman: Pacman,
-        blinky: 'Ghost',
+        blinky: 'Ghost | None',
         width: int,
         height: int,
     ) -> tuple[int, int]:
@@ -179,9 +176,9 @@ class Ghost:
             target_y = self.block(pacman.y + 4 * pac_direc_y, 0, height - 1)
             return (target_x, target_y)
 
-        # Truc chiant entre blinky et pacman, il prend les cases entre pacman
-        # et rouge
-        # et il double la distance, et cette case sera la cible
+        # Truc chiant entre blinky et pacman, il prend les cases entre
+        # pacman et rouge et il double la distance, et cette case sera
+        # la cible
         elif self.color == Color.BLUE:
             if blinky is None:
                 return (pacman.x, pacman.y)
@@ -193,22 +190,22 @@ class Ghost:
             target_y = self.block(2 * pac_direc_y - blinky.y, 0, height - 1)
             return (target_x, target_y)
 
-        # Mouvement Aléatoire
-        elif self.color == Color.ORANGE:
+        # Mouvement Aléatoire (Color.ORANGE)
+        else:
             target_x = random.randint(1, width - 2)
             target_y = random.randint(1, height - 2)
             return (target_x, target_y)
 
-    # On met en paramètre Blinky car Inky à besoin de connaître sa position
-    # pour bouger
+    # On met en paramètre Blinky car Inky à besoin de connaître
+    # sa position pour bouger
     def move(
         self,
         tile_map: list[list[Tile]],
         width: int,
         height: int,
         pacman: Pacman,
-        blinky: 'Ghost',
-    ):
+        blinky: 'Ghost | None',
+    ) -> None:
         self.prev_x, self.prev_y = self.x, self.y
         target = self.get_target(pacman, blinky, width, height)
         has_wall = wall_from_tiles(tile_map)

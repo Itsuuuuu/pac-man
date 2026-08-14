@@ -18,10 +18,13 @@ clean:
 fclean:
 	rm -rf .venv
 
+MYPY_FLAGS = --warn-return-any --warn-unused-ignores --ignore-missing-imports \
+             --disallow-untyped-defs --check-untyped-defs
+
 lint:
 	uv run flake8 src/
-	uv run mypy mypy srx / --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	uv run mypy src/ $(MYPY_FLAGS)
 
 lint-strict:
-	uv run flake8 	src/
-	uv run mypy	  src/ --strict --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	uv run flake8 src/
+	uv run mypy src/ --strict $(MYPY_FLAGS)

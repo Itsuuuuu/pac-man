@@ -2,8 +2,9 @@ import os
 
 import pygame
 
-from src.characters import Color
+from src.characters import Color, Ghost
 from src.game_builder import build_game, build_level
+from src.game_setting import GameSetting
 from src.tile import Pacgum
 
 from .draw import (
@@ -15,26 +16,26 @@ from .draw import (
     draw_pause,
 )
 from .draw_maze import draw_game_screen
-from .utils import load_highscores, save_highscores
+from .utils import Highscore, Theme, load_highscores, save_highscores
 
 
 # Chemin absolu vers les polices (robuste, independant du cwd)
 FONT_DIR = os.path.join(os.path.dirname(__file__), "font_pacman")
 
 # Vitesses (delai entre deux deplacements d'une case, en ms) et duree
-# d'invincibilite :
-# desormais definies par niveau dans la config, lues via self.game.params.
-# Plus la valeur est GRANDE, plus le personnage est LENT.
+# d'invincibilite : desormais definies par niveau dans la config, lues
+# via self.game.params. Plus la valeur est GRANDE, plus le personnage
+# est LENT.
 
 # Touches de direction -> vecteur de deplacement
-KEY_DIRECTIONS = {
+KEY_DIRECTIONS: dict[int, tuple[int, int]] = {
     pygame.K_UP: (0, -1),
     pygame.K_DOWN: (0, 1),
     pygame.K_LEFT: (-1, 0),
     pygame.K_RIGHT: (1, 0),
 }
 
-THEMES = [
+THEMES: list[Theme] = [
     {"name": "Classic",
      "background": (0, 0, 0),
      "text": (255, 0, 0),
@@ -73,7 +74,7 @@ class PacManApp:
     boucle de jeu.
     """
 
-    def __init__(self, config_path):
+    def __init__(self, config_path: str) -> None:
         self.config_path = config_path
 
         pygame.init()
@@ -82,6 +83,7 @@ class PacManApp:
         # Charger le son de lancement (Assets/sound/start.wav)
         ASSETS_DIR = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..", "Assets"))
+        self.start_sound: pygame.mixer.Sound | None = None
         try:
             start_path = os.path.join(ASSETS_DIR, "sound", "start.wav")
             self.start_sound = pygame.mixer.Sound(start_path)
@@ -93,22 +95,24 @@ class PacManApp:
             "Invincibility", "Infinite lives", "Edible ghosts",
             "Level skips", "Point additions",
         ]
-        self.cheat_states = {
+        self.cheat_states: dict[str, bool] = {
             "Invincibility": False,
             "Infinite lives": False,
             "Edible ghosts": False,
         }
-        self.cheat_value = {"Level skips": 0, "Point additions": 0}
-        self.cheat_max = {"Level skips": 42, "Point additions": 9999}
+        self.cheat_value: dict[str, int] = {
+            "Level skips": 0, "Point additions": 0}
+        self.cheat_max: dict[str, int] = {
+            "Level skips": 42, "Point additions": 9999}
 
         self.options = [
             "Start Game", "Options", "High Scores", "Cheat", "Exit",
         ]
         self.options_options = ["Dimensions", "Colors", "Back"]
         self.pause_options = ["Resume", "Restart", "Quit to Menu"]
-        # 4 resolutions standards (le labyrinthe s'adapte automatiquement a la
-        # fenetre)
-        self.screen_dimensions = [
+        # 4 resolutions standards
+        # (le labyrinthe s'adapte automatiquement a la fenetre)
+        self.screen_dimensions: list[tuple[int, int]] = [
             (1024, 768),    # XGA (4:3)
             (1280, 800),    # WXGA (16:10)
             (1600, 900),    # HD+ (16:9)
@@ -131,22 +135,25 @@ class PacManApp:
         self.font = pygame.font.SysFont("Rockwell Nova", 50, bold=True)
         self.hud_font = pygame.font.SysFont("Rockwell Nova", 28, bold=True)
 
-        self.highscores = load_highscores("highscore.json")
+        self.highscores: list[Highscore] = load_highscores("highscore.json")
+        # Rectangles des entrees du menu, remplis au rendu (clics souris)
+        self.menu_item_rects: list[pygame.Rect] = []
         self.clock = pygame.time.Clock()
 
         self.state = "menu"
         self.running = True
 
         # Suivi d'etat pour detecter transitions (utile pour arreter les sons)
-        self.prev_state = None
+        self.prev_state: str | None = None
 
-        # Etat de la partie en cours
-        self.game = None
-        self.direction = (0, 0)
+        # Etat de la partie en cours (None tant que start_game() n'a pas
+        # ete appele : voir la propriete `game`)
+        self._game: GameSetting | None = None
+        self.direction: tuple[int, int] = (0, 0)
         # Buffer de touches : stocke la prochaine commande (1 maximum)
-        self.input_buffer = []
-        # Timers de deplacement separes : pacman et fantomes avancent a leur
-        # propre rythme
+        self.input_buffer: list[tuple[int, int]] = []
+        # Timers de deplacement separes : pacman et fantomes avancent a
+        # leur propre rythme
         self.pacman_timer = 0
         self.ghost_timer = 0
         self.invincible_timer = 0
@@ -155,19 +162,36 @@ class PacManApp:
 
         self.player_name = ""
 
-        self.editing_cheat = None
-        self.cheat_input_buffer = 0
+        self.editing_cheat: str | None = None
+        self.cheat_input_buffer = ""
 
         self.current_level = 1
         self.level_timer_ms = 0
 
         self.theme_index = 0
 
+    @property
+    def game(self) -> GameSetting:
+        """Partie en cours.
+
+        N'est lisible qu'une fois start_game() appele : tout le code de
+        jeu (pas, collisions, rendu) ne tourne que dans cet etat.
+        """
+        assert self._game is not None, "aucune partie en cours"
+        return self._game
+
+    @game.setter
+    def game(self, value: GameSetting) -> None:
+        self._game = value
+
+    def has_game(self) -> bool:
+        return self._game is not None
+
     # ------------------------------------------------------------------ #
     # Gestion des entrees
     # ------------------------------------------------------------------ #
 
-    def handle_pause_events(self, event):
+    def handle_pause_events(self, event: pygame.event.Event) -> None:
         if event.key == pygame.K_UP:
             if self.pause_index > 0:
                 self.pause_index -= 1
@@ -182,7 +206,7 @@ class PacManApp:
             elif self.pause_index == 2:
                 self.state = "menu"
 
-    def handle_menu_events(self, event):
+    def handle_menu_events(self, event: pygame.event.Event) -> None:
         if event.key == pygame.K_UP:
             if self.menu_index > 0:
                 self.menu_index -= 1
@@ -201,7 +225,7 @@ class PacManApp:
             elif self.menu_index == 4:
                 self.running = False
 
-    def handle_options_events(self, event):
+    def handle_options_events(self, event: pygame.event.Event) -> None:
         if event.key == pygame.K_UP:
             if self.options_index > 0:
                 self.options_index -= 1
@@ -220,7 +244,7 @@ class PacManApp:
             elif self.options_index == 2:
                 self.state = "menu"
 
-    def handle_cheat_events(self, event):
+    def handle_cheat_events(self, event: pygame.event.Event) -> None:
         current_cheat = self.cheats[self.cheat_index]
 
         if self.editing_cheat is not None:
@@ -241,12 +265,17 @@ class PacManApp:
                 self.editing_cheat = current_cheat
                 self.cheat_input_buffer = str(self.cheat_value[current_cheat])
 
-    def handle_cheat_input_event(self, event):
+    def handle_cheat_input_event(self, event: pygame.event.Event) -> None:
+        # N'est appele que depuis handle_cheat_events, qui verifie d'abord
+        # qu'une valeur est en cours d'edition.
+        editing = self.editing_cheat
+        assert editing is not None
+
         if event.key == pygame.K_RETURN:
             value = (int(self.cheat_input_buffer)
                      if self.cheat_input_buffer else 0)
-            value = min(value, self.cheat_max[self.editing_cheat])
-            self.cheat_value[self.editing_cheat] = value
+            value = min(value, self.cheat_max[editing])
+            self.cheat_value[editing] = value
             self.editing_cheat = None
             self.cheat_input_buffer = ""
         elif event.key == pygame.K_ESCAPE:
@@ -255,11 +284,11 @@ class PacManApp:
         elif event.key == pygame.K_BACKSPACE:
             self.cheat_input_buffer = self.cheat_input_buffer[:-1]
         elif event.unicode.isdigit():
-            max_digits = len(str(self.cheat_max[self.editing_cheat]))
+            max_digits = len(str(self.cheat_max[editing]))
             if len(self.cheat_input_buffer) < max_digits:
                 self.cheat_input_buffer += event.unicode
 
-    def update_cheat(self, dt):
+    def update_cheat(self, dt: int) -> None:
         """Permet de maintenir DROITE/GAUCHE pour faire defiler une valeur en
         continu.
         """
@@ -284,7 +313,7 @@ class PacManApp:
             if self.cheat_value[current_cheat] > 0:
                 self.cheat_value[current_cheat] -= 1
 
-    def handle_game_events(self, event):
+    def handle_game_events(self, event: pygame.event.Event) -> None:
         key_dir = KEY_DIRECTIONS.get(event.key)
         if key_dir is None:
             return
@@ -304,7 +333,7 @@ class PacManApp:
             self.input_buffer.clear()
             self.input_buffer.append(key_dir)
 
-    def handle_enter_name_events(self, event):
+    def handle_enter_name_events(self, event: pygame.event.Event) -> None:
         if event.key == pygame.K_RETURN:
             pseudo = self.player_name.strip() or "PLAYER"
             save_highscores("highscore.json", pseudo, self.game.current_score)
@@ -317,7 +346,7 @@ class PacManApp:
                 and len(self.player_name) < MAX_NAME_LENGTH):
             self.player_name += event.unicode
 
-    def process_events(self):
+    def process_events(self) -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -325,8 +354,7 @@ class PacManApp:
 
             # Souris : survol et click pour le menu
             if event.type == pygame.MOUSEMOTION:
-                if (self.state == "menu"
-                        and getattr(self, "menu_item_rects", None)):
+                if self.state == "menu" and self.menu_item_rects:
                     mx, my = event.pos
                     for i, rect in enumerate(self.menu_item_rects):
                         if rect.collidepoint((mx, my)):
@@ -337,12 +365,12 @@ class PacManApp:
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if (event.button == 1 and self.state == "menu"
-                        and getattr(self, "menu_item_rects", None)):
+                        and self.menu_item_rects):
                     mx, my = event.pos
                     for i, rect in enumerate(self.menu_item_rects):
                         if rect.collidepoint((mx, my)):
-                            # Reproduit l'action du clavier pour l'option
-                            # cliquée
+                            # Reproduit l'action du clavier
+                            # pour l'option cliquée
                             if i == 0:
                                 self.start_game()
                             elif i == 1:
@@ -390,7 +418,7 @@ class PacManApp:
     # ------------------------------------------------------------------ #
     # Logique de jeu
     # ------------------------------------------------------------------ #
-    def reset_level_state(self):
+    def reset_level_state(self) -> None:
         """Remet a zero le pilotage d'un niveau : direction, buffer, timers,
         chrono.
         """
@@ -402,7 +430,7 @@ class PacManApp:
         self.game_started = False
         self.level_timer_ms = self.game.params.level_max_time * 1000
 
-    def start_game(self):
+    def start_game(self) -> None:
         self.current_level = 1
         self.game = build_game(self.config_path)
         self.reset_level_state()
@@ -421,13 +449,13 @@ class PacManApp:
             pass
         self.state = "game"
 
-    def find_blinky(self):
+    def find_blinky(self) -> Ghost | None:
         for ghost in self.game.ghosts:
             if ghost.color == Color.RED:
                 return ghost
         return None
 
-    def ghost_interval(self):
+    def ghost_interval(self) -> int:
         """Delai courant entre deux deplacements de fantome (plus lent s'ils
         fuient).
         """
@@ -435,7 +463,7 @@ class PacManApp:
             return self.game.params.ghost_frightened_move_ms
         return self.game.params.ghost_move_ms
 
-    def move_progress(self):
+    def move_progress(self) -> tuple[float, float]:
         """Avancement (0..1) de pacman et des fantomes entre leur case
         precedente et la courante. Sert uniquement a l'affichage, qui
         interpole pour rester fluide alors que la logique n'avance que d'une
@@ -445,7 +473,7 @@ class PacManApp:
         ghosts = min(1.0, self.ghost_timer / self.ghost_interval())
         return pacman, ghosts
 
-    def step_pacman(self):
+    def step_pacman(self) -> None:
         """Fait avancer pacman d'une case : direction, deplacement, ramassage,
         collisions.
         """
@@ -487,7 +515,7 @@ class PacManApp:
         if game.pacgum <= 0:
             self.next_level()
 
-    def next_level(self):
+    def next_level(self) -> None:
         """Passe au niveau suivant en conservant score et vies."""
         self.current_level += 1
         self.game = build_level(
@@ -498,7 +526,7 @@ class PacManApp:
         )
         self.reset_level_state()
 
-    def step_ghosts(self):
+    def step_ghosts(self) -> None:
         """Fait avancer tous les fantomes d'une case, puis verifie les
         collisions.
         """
@@ -513,7 +541,7 @@ class PacManApp:
         # Collisions : un fantome a pu entrer dans pacman
         self.resolve_collisions()
 
-    def resolve_collisions(self):
+    def resolve_collisions(self) -> None:
         game = self.game
         pacman = game.pacman
         for ghost in game.ghosts:
@@ -526,7 +554,7 @@ class PacManApp:
                 self.lose_life()
                 return
 
-    def lose_life(self):
+    def lose_life(self) -> None:
         game = self.game
         if not self.cheat_states["Infinite lives"]:
             game.current_lives -= 1
@@ -542,7 +570,7 @@ class PacManApp:
         if game.current_lives <= 0:
             self.end_game(won=False)
 
-    def end_game(self, won):
+    def end_game(self, won: bool) -> None:
         self.game.is_finished = True
         if not won:
             self.state = "enter_name"
@@ -550,7 +578,7 @@ class PacManApp:
             self.state = "menu"
         self.menu_index = 0
 
-    def update_game(self, dt):
+    def update_game(self, dt: int) -> None:
         if self.invincible_timer > 0:
             self.invincible_timer -= dt
             if (self.invincible_timer <= 0
@@ -580,7 +608,7 @@ class PacManApp:
     # ------------------------------------------------------------------ #
     # Rendu
     # ------------------------------------------------------------------ #
-    def render(self):
+    def render(self) -> None:
         theme = THEMES[self.theme_index]
         self.screen.fill(theme["background"])
 
@@ -638,7 +666,7 @@ class PacManApp:
     # ------------------------------------------------------------------ #
     # Boucle principale
     # ------------------------------------------------------------------ #
-    def run(self):
+    def run(self) -> None:
         # Ne pas lancer la musique automatiquement au demarrage
         # La lecture se fera explicitement dans `start_game()`
         while self.running:
@@ -656,7 +684,7 @@ class PacManApp:
                     except Exception:
                         pass
                 self.prev_state = self.state
-            if self.state == "game" and self.game is not None:
+            if self.state == "game" and self.has_game():
                 self.update_game(dt)
             elif self.state == "cheat":
                 self.update_cheat(dt)

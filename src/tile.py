@@ -21,7 +21,7 @@ class Tile:
         walls_value: int = 15,
         zone_type: TileType = TileType.AUTORISED_CASE,
         content: Pacgum = Pacgum.NOTHING,
-    ):
+    ) -> None:
         self.x = x
         self.y = y
         self.zone_type = zone_type

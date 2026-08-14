@@ -1,17 +1,20 @@
 import pygame
 
+from src.characters import Ghost, Pacman
+from src.game_setting import GameSetting
 from src.tile import Pacgum
 from .assets import get_ghost_sprite, get_pacman_sprite
+from .utils import Rgb, Theme
 
 
 # Zone reservee en haut pour le HUD (score / vies)
 HUD_HEIGHT = 50
 # Marge autour du labyrinthe
 MARGIN = 12
-WALL_COLOR = (0, 0, 255)
-GUM_COLOR = (255, 255, 200)
+WALL_COLOR: Rgb = (0, 0, 255)
+GUM_COLOR: Rgb = (255, 255, 200)
 
-GHOST_COLOR_MAP = {
+GHOST_COLOR_MAP: dict[str, Rgb] = {
     "red": (255, 0, 0),
     "pink": (255, 182, 193),
     "blue": (0, 255, 255),
@@ -20,13 +23,16 @@ GHOST_COLOR_MAP = {
 
 SIDEBAR_WIDTH = 260
 BOX_GAP = 16
-BOX_BORDER_COLOR = (255, 255, 255)
-HEART_FILLED_COLOR = (255, 0, 0)
-HEART_EMPTY_COLOR = (80, 80, 80)
-TIMER_WARNING_COLOR = (255, 60, 60)
+BOX_BORDER_COLOR: Rgb = (255, 255, 255)
+HEART_FILLED_COLOR: Rgb = (255, 0, 0)
+HEART_EMPTY_COLOR: Rgb = (80, 80, 80)
+TIMER_WARNING_COLOR: Rgb = (255, 60, 60)
 
 
-def compute_layout(screen, game):
+def compute_layout(
+    screen: pygame.Surface,
+    game: GameSetting,
+) -> tuple[int, int, int]:
     """Calcule la taille de tuile et le decalage pour centrer le labyrinthe
     dans la fenetre.
     """
@@ -43,7 +49,14 @@ def compute_layout(screen, game):
     return tile, offset_x, offset_y
 
 
-def draw_maze(screen, game, tile, offset_x, offset_y, theme):
+def draw_maze(
+    screen: pygame.Surface,
+    game: GameSetting,
+    tile: int,
+    offset_x: int,
+    offset_y: int,
+    theme: Theme,
+) -> None:
     line_width = max(2, tile // 8)
     cap_radius = line_width // 2
     wall_color = theme["wall"]
@@ -77,7 +90,13 @@ def draw_maze(screen, game, tile, offset_x, offset_y, theme):
                                    max(4, tile // 4))
 
 
-def entity_pixels(entity, tile, offset_x, offset_y, progress):
+def entity_pixels(
+    entity: Pacman | Ghost,
+    tile: int,
+    offset_x: int,
+    offset_y: int,
+    progress: float,
+) -> tuple[int, int]:
     """Position a l'ecran d'une entite, interpolee entre sa case precedente et
     la courante.
 
@@ -90,8 +109,15 @@ def entity_pixels(entity, tile, offset_x, offset_y, progress):
     return round(offset_x + x * tile), round(offset_y + y * tile)
 
 
-def draw_entities(screen, game, tile, offset_x, offset_y,
-                  pacman_progress=1.0, ghost_progress=1.0):
+def draw_entities(
+    screen: pygame.Surface,
+    game: GameSetting,
+    tile: int,
+    offset_x: int,
+    offset_y: int,
+    pacman_progress: float = 1.0,
+    ghost_progress: float = 1.0,
+) -> None:
     # Frame d'animation basee sur le temps (change ~8x/seconde)
     frame = (pygame.time.get_ticks() // 120) % 3
 
@@ -120,7 +146,13 @@ def draw_entities(screen, game, tile, offset_x, offset_y,
             pygame.draw.circle(screen, color, center, tile // 2 - 2)
 
 
-def draw_heart(screen, center_x, center_y, size, filled):
+def draw_heart(
+    screen: pygame.Surface,
+    center_x: int,
+    center_y: int,
+    size: int,
+    filled: bool,
+) -> None:
     color = HEART_FILLED_COLOR if filled else HEART_EMPTY_COLOR
     radius = size // 4
 
@@ -137,8 +169,16 @@ def draw_heart(screen, center_x, center_y, size, filled):
     pygame.draw.polygon(screen, color, points)
 
 
-def draw_box(screen, font, x, y, width, height, label,
-             label_color=(255, 255, 255)):
+def draw_box(
+    screen: pygame.Surface,
+    font: pygame.font.Font,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    label: str,
+    label_color: Rgb = (255, 255, 255),
+) -> tuple[int, int]:
     """Dessine un cadre avec un label en haut, retourne le point (x, y) ou
     dessiner le contenu.
     """
@@ -148,7 +188,13 @@ def draw_box(screen, font, x, y, width, height, label,
     return x + 15, y + 50
 
 
-def draw_sidebar(screen, font, game, level, seconds_remaining):
+def draw_sidebar(
+    screen: pygame.Surface,
+    font: pygame.font.Font,
+    game: GameSetting,
+    level: int,
+    seconds_remaining: int,
+) -> None:
     x = screen.get_width() - SIDEBAR_WIDTH - MARGIN
     y = MARGIN
     box_width = SIDEBAR_WIDTH
@@ -195,8 +241,16 @@ def draw_sidebar(screen, font, game, level, seconds_remaining):
     screen.blit(timer_surface, (content_x, content_y))
 
 
-def draw_game_screen(screen, game, hud_font, level, seconds_remaining, theme,
-                     pacman_progress=1.0, ghost_progress=1.0):
+def draw_game_screen(
+    screen: pygame.Surface,
+    game: GameSetting,
+    hud_font: pygame.font.Font,
+    level: int,
+    seconds_remaining: int,
+    theme: Theme,
+    pacman_progress: float = 1.0,
+    ghost_progress: float = 1.0,
+) -> None:
     tile, offset_x, offset_y = compute_layout(screen, game)
     draw_maze(screen, game, tile, offset_x, offset_y, theme)
     draw_entities(screen, game, tile, offset_x, offset_y, pacman_progress,

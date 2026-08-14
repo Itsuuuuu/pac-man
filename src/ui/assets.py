@@ -7,9 +7,9 @@ import pygame
 ASSETS_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "Assets"))
 
-# Fichiers des fantomes par couleur (+ etat "frightened" quand pacman est
-# invincible)
-GHOST_FILES = {
+# Fichiers des fantomes par couleur
+# (+ etat "frightened" quand pacman est invincible)
+GHOST_FILES: dict[str, str] = {
     "red": "ghosts/blinky.png",
     "pink": "ghosts/pinky.png",
     "blue": "ghosts/inky.png",
@@ -19,7 +19,7 @@ GHOST_FILES = {
 }
 
 # Dossier de sprites de pacman selon sa direction
-PACMAN_DIRS = {
+PACMAN_DIRS: dict[tuple[int, int], str] = {
     (1, 0): "pacman-right",
     (-1, 0): "pacman-left",
     (0, -1): "pacman-up",
@@ -27,12 +27,12 @@ PACMAN_DIRS = {
 }
 
 # Cache : evite de relire/redimensionner les images a chaque frame
-_cache: dict = {}
+_cache: dict[tuple[str, int], "pygame.Surface | None"] = {}
 
 
-def _load(path: str, size: int):
-    """Charge et met a l'echelle un sprite (nearest-neighbor pour garder le
-    pixel-art net).
+def _load(path: str, size: int) -> "pygame.Surface | None":
+    """Charge et met a l'echelle un sprite
+    (nearest-neighbor pour garder le pixel-art net).
     """
     key = (path, size)
     if key not in _cache:
@@ -50,7 +50,7 @@ def get_ghost_sprite(
     size: int,
     frightened: bool = False,
     dead: bool = False,
-):
+) -> "pygame.Surface | None":
     if dead:
         name = "dead"
     elif frightened:
@@ -60,7 +60,11 @@ def get_ghost_sprite(
     return _load(GHOST_FILES.get(name, GHOST_FILES["red"]), size)
 
 
-def get_pacman_sprite(direction: tuple, frame: int, size: int):
+def get_pacman_sprite(
+    direction: tuple[int, int],
+    frame: int,
+    size: int,
+) -> "pygame.Surface | None":
     # Direction (0, 0) au spawn -> on affiche pacman vers la droite par defaut
     folder = PACMAN_DIRS.get(direction, "pacman-right")
     sprite_number = (frame % 3) + 1

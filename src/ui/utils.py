@@ -1,17 +1,33 @@
 import json
+from typing import Any, TypedDict
 
 
-def load_highscores(filepath):
+Highscore = dict[str, Any]
+Rgb = tuple[int, int, int]
+
+
+class Theme(TypedDict):
+    """Palette d'un theme : son nom et les couleurs de chaque element."""
+
+    name: str
+    background: Rgb
+    text: Rgb
+    highlight: Rgb
+    title: Rgb
+    wall: Rgb
+
+
+def load_highscores(filepath: str) -> list[Highscore]:
     try:
         with open(filepath, 'r') as file:
-            data = json.load(file)
+            data: list[Highscore] = json.load(file)
     except FileNotFoundError:
         return []
 
     return sorted(data, key=lambda entry: entry["score"], reverse=True)
 
 
-def ordinal(n):
+def ordinal(n: int) -> str:
     if 11 <= n % 100 <= 13:
         suffix = "TH"
     else:
@@ -19,10 +35,10 @@ def ordinal(n):
     return f"{n}{suffix}"
 
 
-def save_highscores(filepath, pseudo, score):
+def save_highscores(filepath: str, pseudo: str, score: int) -> None:
     try:
         with open(filepath, 'r') as file:
-            data = json.load(file)
+            data: list[Highscore] = json.load(file)
     except FileNotFoundError:
         data = []
 

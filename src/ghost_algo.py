@@ -1,8 +1,10 @@
 from collections import deque
 from typing import Callable, Optional
 
+from src.tile import Tile
+
 N, E, S, W = 1, 2, 4, 8
-DELTAS = {
+DELTAS: dict[int, tuple[int, int]] = {
     N: (0, -1),
     E: (1, 0),
     S: (0, 1),
@@ -80,10 +82,11 @@ def _rebuild_path(
     goal: Coord,
 ) -> list[Coord]:
     path: list[Coord] = [goal]
-    node: Optional[Coord] = goal
+    node: Coord = goal
     while node != start:
-        node = came_from[node]
-        assert node is not None
+        parent = came_from[node]
+        assert parent is not None
+        node = parent
         path.append(node)
     path.reverse()
     return path
@@ -106,7 +109,7 @@ def wall_from_grid(maze_grid: list[list[int]]) -> HasWall:
     return lambda x, y, d: bool(maze_grid[y][x] & d)
 
 
-def wall_from_tiles(tile_map: list) -> HasWall:
+def wall_from_tiles(tile_map: list[list[Tile]]) -> HasWall:
     return lambda x, y, d: tile_map[y][x].has_wall(d)
 
 
