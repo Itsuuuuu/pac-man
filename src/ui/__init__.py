@@ -1,4 +1,6 @@
-"""Sous-package UI : rendu pygame (menus, labyrinthe, entites) et boucle de jeu."""
+"""Sous-package UI : rendu pygame (menus, labyrinthe, entites) et boucle de
+jeu.
+"""
 
 from .app import PacManApp
 from .draw import (
