@@ -562,9 +562,9 @@ class PacManApp:
 
 		pygame.display.flip()
 
-	# ------------------------------------------------------------------ #
+	# ----------------------------------------------------------------- #
 	# Boucle principale
-	# ------------------------------------------------------------------ #
+	# ----------------------------------------------------------------- #
 	def run(self):
 		# Ne pas lancer la musique automatiquement au demarrage
 		# La lecture se fera explicitement dans `start_game()`

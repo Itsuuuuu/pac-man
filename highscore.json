@@ -90,5 +90,9 @@
     {
         "pseudo": "PLAYER",
         "score": 660
+    },
+    {
+        "pseudo": "test",
+        "score": 1170
     }
 ]
