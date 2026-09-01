@@ -77,12 +77,12 @@ class PacManApp:
 		self.cheat_value = {"Level skips": 0, "Point additions": 0}
 		self.cheat_max = {"Level skips": 42, "Point additions": 9999}
 
-		self.options = ["Start Game", "Options", "High Scores", "Cheat", "Exit"]
-		self.options_options = ["Dimensions", "Colors", "Back"]
-		self.pause_options = ["Resume", "Restart", "Quit to Menu"]
+		self.options = ["Start Game", "Instructions", "High Scores", "Cheat", "Exit"]
+		self.options_options = ["How to Play", "Left Arrow, Up Arrow, Down Arrow, Right Arrow", "The goal is to eat all the dots while avoiding all the ghosts","Back"]
+		self.pause_options = ["Resume", "Restart", "Back"]
 		# 4 resolutions standards (le labyrinthe s'adapte automatiquement a la fenetre)
 		self.screen_dimensions = [
-			(1024, 768),    # XGA (4:3)
+			(1200, 768),    # XGA (4:3)
 			(1280, 800),    # WXGA (16:10)
 			(1600, 900),    # HD+ (16:9)
 			(1920, 1080),   # Full HD (16:9)
@@ -180,13 +180,7 @@ class PacManApp:
 			if self.options_index != len(self.options_options) - 1:
 				self.options_index += 1
 		elif event.key == pygame.K_RETURN:
-			if self.options_index == 0:
-				self.dimension_index = (self.dimension_index + 1) % len(self.screen_dimensions)
-				self.screen = pygame.display.set_mode(self.screen_dimensions[self.dimension_index])
-				self.center_ref = self.screen_dimensions[self.dimension_index][0]
-			elif self.options_index == 1:
-				self.theme_index = (self.theme_index + 1) % len(THEMES)
-			elif self.options_index == 2:
+			if self.options_index == 3:
 				self.state = "menu"
 
 	def handle_cheat_events(self, event):
@@ -548,9 +542,6 @@ class PacManApp:
 				height=self.center_ref,
 				options_options=self.options_options,
 				options_index=self.options_index,
-				screen_dimensions=self.screen_dimensions,
-				dimension_index=self.dimension_index,
-				theme_name=theme["name"],
 				theme=theme
 			)
 		elif self.state == "pause":

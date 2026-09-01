@@ -53,9 +53,6 @@ def draw_options(
     height: int,
     options_options: list[str],
     options_index: int,
-    screen_dimensions: list[tuple[int, int]],
-    dimension_index: int,
-    theme_name: str,
     theme: Theme,
 ) -> None:
     title = title_font.render("Options", True, theme["title"])
@@ -63,13 +60,7 @@ def draw_options(
     screen.blit(title, title_rect)
 
     for i in range(len(options_options)):
-        if i == 0:
-            largeur, hauteur = screen_dimensions[dimension_index]
-            texte = f"Dimensions: {largeur} x {hauteur}"
-        elif i == 1:
-            texte = f"Colors: {theme_name}"
-        else:
-            texte = options_options[i]
+        texte = options_options[i]
         color = theme["highlight"] if i == options_index else theme["text"]
         text = font.render(texte, True, color)
         text_rect = text.get_rect(center=(height // 2, 300 + i * 100))
