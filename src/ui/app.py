@@ -449,10 +449,25 @@ class PacManApp:
         if self.game is not None:
             self.level_timer_ms = self.game.params.level_max_time * 1000
 
+    def start_level_number(self) -> int:
+        """Niveau auquel demarre une nouvelle partie.
+
+        Le cheat "Level skips" decale le depart pour que le correcteur
+        atteigne directement un niveau avance, sans avoir a terminer tous
+        ceux qui precedent. La valeur est bornee au dernier niveau de la
+        config.
+
+        Returns:
+            Le numero du niveau de depart (1-based).
+        """
+        skips = self.cheat_value["Level skips"]
+        return min(1 + skips, len(self.config.level))
+
     def start_game(self) -> None:
-        self.current_level = 1
+        self.current_level = self.start_level_number()
         self.game_won = False
-        game = build_level(self.config, 1, 0, self.config.lives)
+        game = build_level(
+            self.config, self.current_level, 0, self.config.lives)
         self.game = game
         self.reset_level_state()
         if self.cheat_states["Invincibility"]:

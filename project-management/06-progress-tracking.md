@@ -19,7 +19,7 @@ sheet.
 | VI.2 | Player movement, lives, respawn, win/lose | **Done** — clearing the last configured level wins the game |
 | VI.3 | Autonomous ghosts, chase, flee, respawn | **Done** |
 | VI.4 | Pacgums and super-pacgums | **Done** |
-| VI.5 | Cheat mode | **Partial** — "Level skips" is settable but not applied (accepted) |
+| VI.5 | Cheat mode | **Done** — five cheats, all applied |
 | VI.6 | Scoring | **Done** |
 | VI.7 | At least 10 levels, timer, pause, end of game | **Done** — 10 levels configured, completing the last one wins |
 | VI.8 | Menus, HUD, pause, game over, victory | **Done** — victory screen with congratulations, final score and name entry |
@@ -43,7 +43,7 @@ sheet.
 | 10 | Packaging and publication | Required by VII; platform validation takes time | — | ☑ build done, ☐ publication |
 | 11 | Accept spaces in player names | Required by V.5 | — | ☑ |
 | 12 | Reject a second command-line argument | Required by V.1 | — | ☑ |
-| 13 | Apply the "Level skips" cheat | Makes the reviewer's job easier | — | not planned |
+| 13 | Apply the "Level skips" cheat | Makes the reviewer's job easier | — | ☑ |
 
 Only the publication half of item 10 is still open.
 

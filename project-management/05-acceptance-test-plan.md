@@ -103,7 +103,7 @@ implemented yet.
 | T48 | Infinite lives | Life count never drops | PASS |
 | T49 | Edible ghosts | Ghosts are always edible | PASS |
 | T50 | Point additions | Points added at game start | PASS |
-| T51 | Level skips | Skip to a later level | TODO — settable but not applied, accepted as-is |
+| T51 | Level skips | Skip to a later level | PASS — a new game starts N levels further in |
 
 ## Packaging (subject VII)
 
@@ -125,8 +125,7 @@ implemented yet.
 
 ## Summary
 
-**59 tests — 56 PASS, 0 FAIL, 3 TODO.**
+**59 tests — 57 PASS, 0 FAIL, 2 TODO.**
 
-No test fails. What remains is the publication of the build (T55, T13's
-reinstall counterpart is already covered) and the "Level skips" cheat (T51),
-which the team decided to leave settable but inactive.
+No test fails. What remains is the publication of the build (T55) and its
+verification by download.

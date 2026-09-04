@@ -20,7 +20,8 @@ MENUS
   Start Game    Begin a new run
   Instructions  Controls and rules
   High Scores   Top 10 board, kept between sessions
-  Cheat         Invincibility, infinite lives, edible ghosts, bonus points
+  Cheat         Invincibility, infinite lives, edible ghosts,
+                level skips, bonus points
   Exit          Quit the game
 
   In the pause menu: resume, restart the run, or go back to the main menu.

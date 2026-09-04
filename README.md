@@ -93,7 +93,7 @@ review easy:
 | Invincibility | Ghosts cannot kill Pac-Man |
 | Infinite lives | The life counter never drops |
 | Edible ghosts | Ghosts are always edible |
-| Level skips | Value settable up to 42 *(not applied yet)* |
+| Level skips | Start a new game N levels further in, capped at the last level |
 | Point additions | Adds up to 9 999 points at the start of a game |
 
 Toggles are switched with Enter; numeric values are adjusted by holding the
