@@ -115,8 +115,8 @@ as the executable for its platform.
 **3. Verify.** Download the published build on a machine that has neither
 Python nor the project checked out, and confirm it starts and plays.
 
-> `TO COMPLETE` — Add the project URL here once published, so the reviewer can
-> reach it directly from the repository.
+**4. Link it.** Add the project URL to this section once the page is live, so
+the reviewer can reach the build directly from the repository.
 
 ## Regenerating during the peer review
 
