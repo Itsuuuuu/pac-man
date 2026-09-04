@@ -14,6 +14,15 @@ required by the subject (chapter VIII, *Project management*).
 | [05-acceptance-test-plan.md](05-acceptance-test-plan.md) | Feature-by-feature acceptance tests mapped to the subject |
 | [06-progress-tracking.md](06-progress-tracking.md) | Planned vs. actual progress, and the remaining backlog |
 
+## A note on the commit history
+
+The commit messages were normalised to `type(scope): description` near the end
+of the project. Each message was rewritten from the diff of the commit it
+describes; authors and author dates are untouched. The consequence is that
+every commit carries the same *committer* date, the day of the rewrite. See the
+retrospective in [02-team-organization.md](02-team-organization.md) for why we
+consider this a poor substitute for having agreed a convention on day one.
+
 ## Sources of evidence
 
 Everything marked as *measured* in these documents comes from the repository
@@ -27,8 +36,3 @@ make lint                                       # code quality status
 
 The timeline, the contribution figures, and the module ownership tables were
 derived from the 51 commits between **2026-06-30** and **2026-09-01**.
-
-> **Note for the team.** Sections tagged `TO COMPLETE` require information that
-> only the team holds (meeting decisions, arbitration, blocking points). Fill
-> them in before the defence — the reviewer will ask you to walk through this
-> directory and explain it.
