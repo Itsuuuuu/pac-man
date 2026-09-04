@@ -20,7 +20,6 @@ clean:
 package:
 	uv run pyinstaller --noconfirm --clean pacman.spec
 	cp INSTRUCTIONS.txt config.json dist/pacman/
-	@echo "Build autonome pret dans dist/pacman/ (et dist/Pac-Man.app sur macOS)"
 
 fclean: clean
 	rm -rf .venv
