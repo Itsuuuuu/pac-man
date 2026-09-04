@@ -1,0 +1,79 @@
+PAC-MAN
+=======
+
+Clear every maze of its pacgums without being caught by the ghosts.
+
+
+CONTROLS
+--------
+
+  Arrow keys    Move Pac-Man / navigate the menus
+  Enter         Confirm a menu entry
+  Escape        Pause during a game, go back in a menu,
+                quit from the main menu
+  Mouse         Hover and click the main-menu entries
+
+
+MENUS
+-----
+
+  Start Game    Begin a new run
+  Instructions  Controls and rules
+  High Scores   Top 10 board, kept between sessions
+  Cheat         Invincibility, infinite lives, edible ghosts, bonus points
+  Exit          Quit the game
+
+  In the pause menu: resume, restart the run, or go back to the main menu.
+
+
+RULES
+-----
+
+  Eat every pacgum in a maze to clear the level.
+  Clear all 10 levels to win the game.
+
+  A super-pacgum, in each corner of the maze, makes the ghosts flee for a
+  few seconds. Eat them while they flee for bonus points.
+
+  Touching a ghost at any other time costs a life. You start with 3.
+  Each level is timed; running out of time also costs a life.
+
+  Score, lives and progress carry over from one level to the next.
+  At the end of a run, win or lose, you can enter a name for the
+  highscore board (10 characters max, letters, digits and spaces).
+
+
+CONFIGURATION
+-------------
+
+  The game reads a config.json file. To change the settings, place your
+  own config.json NEXT TO THE GAME EXECUTABLE: it takes priority over the
+  one bundled inside the game.
+
+  Top-level keys:
+
+    highscore_filename        where the highscore board is stored
+    lives                     starting lives
+    points_per_pacgum         score for a pacgum
+    points_per_super_pacgum   score for a super-pacgum
+    points_per_ghost          score for eating a fleeing ghost
+    seed                      maze seed for level 1
+    level                     list of levels, one entry each
+
+  Per level:
+
+    width, height             maze size (greater than 9)
+    pacgum                    number of pacgums to scatter
+    level_max_time            seconds before a life is lost
+    pacman_move_ms            delay between two Pac-Man steps
+                              (HIGHER MEANS SLOWER)
+    ghost_move_ms             the same, for the ghosts
+    ghost_frightened_move_ms  the same, while the ghosts are fleeing
+    invincible_ms             how long the ghosts flee after a
+                              super-pacgum; 0 disables it for that level
+
+  Blank lines and lines starting with # are ignored, so the file can be
+  commented.
+
+  Any value that is out of range, of the wrong type or missing falls back
+  to a safe default: the game always starts.

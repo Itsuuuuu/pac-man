@@ -5,12 +5,31 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "mazegenerator",
     "pydantic>=2.13.4",
     "pygame>=2.6.1",
 ]
+
+# Le generateur de labyrinthe est le paquet assigne par un autre groupe. Il
+# est installe depuis le wheel fourni (vendor/), jamais copie dans les
+# sources : le correcteur peut le reinstaller depuis son propre wheel sans
+# rien changer au projet.
+[tool.uv.sources]
+mazegenerator = { path = "vendor/mazegenerator-2.0.2-py3-none-any.whl" }
 
 [dependency-groups]
 dev = [
     "flake8>=7.3.0",
     "mypy>=2.3.0",
+    "pyinstaller>=6.0",
 ]
+
+[tool.mypy]
+# Meme raison que pour flake8 : le paquet du groupe assigne reste tel quel.
+exclude = "^(\\.venv|venv|mazegenerator)/"
+
+[[tool.mypy.overrides]]
+# Le paquet assigne ne fournit pas de stubs ni de marqueur py.typed, et nous
+# n'avons pas le droit de le modifier.
+module = "mazegenerator.*"
+ignore_missing_imports = true

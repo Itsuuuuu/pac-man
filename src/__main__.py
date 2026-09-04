@@ -7,7 +7,9 @@ def main() -> None:
     """Point d'entree unique du jeu : lit le chemin de config et lance
     l'application pygame.
     """
-    if len(sys.argv) < 2:
+    # Le sujet impose exactement un argument : un second fichier passe par
+    # erreur doit etre signale, pas ignore silencieusement.
+    if len(sys.argv) != 2:
         print("Error usage: python3 -m src config.json", file=sys.stderr)
         sys.exit(1)
 

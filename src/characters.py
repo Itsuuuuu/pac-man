@@ -19,8 +19,16 @@ class Color(Enum):
     ORANGE = "orange"
 
 
-class Pacman:
-    def __init__(self, x: int, y: int, invincible: bool = False) -> None:
+class Entity:
+    """Base commune a tous les personnages qui se deplacent dans le
+    labyrinthe.
+
+    Elle porte la position, la case de depart, la case precedente (utilisee
+    par l'affichage pour interpoler) et surtout la regle "on ne traverse pas
+    les murs", que Pacman et les fantomes appliquent donc a l'identique.
+    """
+
+    def __init__(self, x: int, y: int) -> None:
         self.x = x
         self.y = y
         self.spawn_x = x
@@ -30,51 +38,88 @@ class Pacman:
         # pour lisser le deplacement.
         self.prev_x = x
         self.prev_y = y
-        self.direction: tuple[int, int] = (0, 0)
-        self.invincible = invincible
 
-    # Indique si pacman peut avancer dans cette direction
-    # (aucun mur sur la case courante)
     def can_move(
         self,
         direc_x: int,
         direc_y: int,
         tile_map: list[list[Tile]],
     ) -> bool:
+        """Indique si la case courante laisse passer dans cette direction.
+
+        Args:
+            direc_x: Composante horizontale du deplacement (-1, 0 ou 1).
+            direc_y: Composante verticale du deplacement (-1, 0 ou 1).
+            tile_map: Carte du niveau.
+
+        Returns:
+            True si aucun mur ne bloque le pas.
+        """
         direction_flag = DIRECTION_FLAGS.get((direc_x, direc_y), 0)
         if direction_flag == 0:
             return False
         return not tile_map[self.y][self.x].has_wall(direction_flag)
 
-    # Pour faire avancer le pacman sur la prochaine case
     def move_to_next(
         self,
         direc_x: int,
         direc_y: int,
         tile_map: list[list[Tile]],
     ) -> None:
+        """Avance d'une case si le mur le permet, sinon ne bouge pas.
+
+        Args:
+            direc_x: Composante horizontale du deplacement.
+            direc_y: Composante verticale du deplacement.
+            tile_map: Carte du niveau.
+        """
         # On part toujours de la case courante : si le pas est bloque,
         # prev == courant et l'affichage n'interpole rien.
         self.prev_x, self.prev_y = self.x, self.y
 
-        # Verification mur, si non, déplacement
+        # Verification mur, si non, deplacement
         if not self.can_move(direc_x, direc_y, tile_map):
             return
         self.x += direc_x
         self.y += direc_y
-        self.direction = (direc_x, direc_y)
+
+    def teleport_to_spawn(self) -> None:
+        """Repositionne l'entite sur sa case de depart, sans animation."""
+        self.x = self.spawn_x
+        self.y = self.spawn_y
+        # Teleportation : prev suit, sinon l'affichage ferait glisser
+        # l'entite a travers le labyrinthe jusqu'au spawn.
+        self.prev_x = self.spawn_x
+        self.prev_y = self.spawn_y
+
+
+class Pacman(Entity):
+    def __init__(self, x: int, y: int, invincible: bool = False) -> None:
+        super().__init__(x, y)
+        self.direction: tuple[int, int] = (0, 0)
+        self.invincible = invincible
+
+    def move_to_next(
+        self,
+        direc_x: int,
+        direc_y: int,
+        tile_map: list[list[Tile]],
+    ) -> None:
+        """Avance d'une case et memorise la direction effectivement prise.
+
+        La direction ne change que si le pas a eu lieu : un virage bloque
+        laisse pacman oriente comme avant.
+        """
+        super().move_to_next(direc_x, direc_y, tile_map)
+        if (self.x, self.y) != (self.prev_x, self.prev_y):
+            self.direction = (direc_x, direc_y)
 
     def fear_ghost(self) -> bool:
         return self.invincible
 
     # Si le Pacman se fait attraper par un ghost, il retourne au spawn
     def back_to_spawn(self) -> None:
-        self.x = self.spawn_x
-        self.y = self.spawn_y
-        # Teleportation : prev suit, sinon l'affichage ferait glisser pacman
-        # a travers le labyrinthe jusqu'au spawn.
-        self.prev_x = self.spawn_x
-        self.prev_y = self.spawn_y
+        self.teleport_to_spawn()
         self.direction = (0, 0)
 
     # Si le Pacman passe sur un super pacgum, on passe is_invinsible
@@ -84,7 +129,7 @@ class Pacman:
         return self.invincible
 
 
-class Ghost:
+class Ghost(Entity):
     def __init__(
         self,
         x: int,
@@ -92,13 +137,7 @@ class Ghost:
         current_zone: TileType = TileType.SPAWN,
         color: Color = Color.RED,
     ) -> None:
-        self.x = x
-        self.y = y
-        self.spawn_x = x
-        self.spawn_y = y
-        # Voir Pacman.prev_x : uniquement pour l'interpolation d'affichage
-        self.prev_x = x
-        self.prev_y = y
+        super().__init__(x, y)
         self.current_zone = current_zone
         self.color = color
         self.is_dead = False
@@ -111,10 +150,7 @@ class Ghost:
     # Remise au spawn seche (perte de vie) : contrairement a back_to_spawn, le
     # fantome ne rentre pas en marchant, il est repositionne d'un coup.
     def respawn(self) -> None:
-        self.x = self.spawn_x
-        self.y = self.spawn_y
-        self.prev_x = self.spawn_x
-        self.prev_y = self.spawn_y
+        self.teleport_to_spawn()
         self.is_dead = False
 
     def run_to_spawn(self, width: int, height: int) -> tuple[int, int]:
@@ -206,12 +242,18 @@ class Ghost:
         pacman: Pacman,
         blinky: 'Ghost | None',
     ) -> None:
-        self.prev_x, self.prev_y = self.x, self.y
         target = self.get_target(pacman, blinky, width, height)
         has_wall = wall_from_tiles(tile_map)
         next_step = bfs_next_step(
             has_wall, width, height, (self.x, self.y), target)
-        if next_step is not None:
-            self.x, self.y = next_step
+
+        if next_step is None:
+            self.prev_x, self.prev_y = self.x, self.y
+        else:
+            # Le pas choisi par le BFS est applique via move_to_next, donc
+            # soumis a la meme verification de mur que pacman.
+            self.move_to_next(
+                next_step[0] - self.x, next_step[1] - self.y, tile_map)
+
         if self.is_dead and (self.x, self.y) == (self.spawn_x, self.spawn_y):
             self.is_dead = False

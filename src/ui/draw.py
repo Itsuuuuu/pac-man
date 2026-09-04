@@ -163,10 +163,34 @@ def draw_enter_name(
     height: int,
     player_name: str,
     score: int,
+    won: bool = False,
 ) -> None:
-    title = title_font.render("Game Over", True, (255, 0, 0))
+    """Ecran de fin de partie, victoire ou defaite.
+
+    Les deux cas affichent le score final et invitent le joueur a entrer son
+    nom pour le classement ; la victoire ajoute un message de felicitations.
+
+    Args:
+        screen: Surface de rendu.
+        font: Police du corps de texte.
+        title_font: Police du titre.
+        height: Largeur de reference pour le centrage horizontal.
+        player_name: Pseudo en cours de saisie.
+        score: Score final de la partie.
+        won: True si le joueur a termine tous les niveaux.
+    """
+    if won:
+        title = title_font.render("You Win", True, (255, 255, 0))
+    else:
+        title = title_font.render("Game Over", True, (255, 0, 0))
     title_rect = title.get_rect(center=(height // 2, 150))
     screen.blit(title, title_rect)
+
+    if won:
+        congrats = font.render(
+            "Congratulations, you cleared every level!", True, (0, 255, 0))
+        congrats_rect = congrats.get_rect(center=(height // 2, 250))
+        screen.blit(congrats, congrats_rect)
 
     score_label = font.render("Your score is:", True, (255, 255, 255))
     score_value = font.render(str(score), True, (0, 255, 0))

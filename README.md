@@ -1,350 +1,326 @@
-# Pac-Man — documentation technique
+*This project has been created as part of the 42 curriculum by rydelepi, guifouqu.*
 
-Clone de Pac-Man en Python / pygame, avec labyrinthe généré procéduralement,
-4 fantômes aux comportements distincts, niveaux à difficulté croissante,
-thèmes de couleurs et menu de triche.
+# Pac-Man
+
+A Pac-Man clone in Python and Pygame: procedurally generated mazes, four
+ghosts with distinct behaviours, levels of increasing difficulty, colour
+themes, and a cheat menu for reviewers.
 
 ```bash
-make install    # uv sync
-make run        # uv run python -m src config.json
-make lint       # flake8 + mypy
+make install     # install dependencies into .venv
+make run         # start the game with config.json
+make lint        # flake8 + mypy
 make lint-strict # flake8 + mypy --strict
+make debug       # start under pdb
+make clean       # remove caches
 ```
 
-## Sommaire
+## Contents
 
-- [Structure du projet](#structure-du-projet)
-- [L'algorithme des fantômes](#lalgorithme-des-fantômes)
-- [La partie GUI](#la-partie-gui)
+- [Description](#description)
+- [Instructions](#instructions)
 - [Configuration](#configuration)
-- [Points connus et pistes d'amélioration](#points-connus-et-pistes-damélioration)
+- [Highscore](#highscore)
+- [Maze Generation](#maze-generation)
+- [Implementation](#implementation)
+- [General Software Architecture](#general-software-architecture)
+- [Project Management](#project-management)
+- [Packaging](#packaging)
+- [Resources](#resources)
 
 ---
 
-## Structure du projet
+## Description
 
+The goal is to clear every maze of its pacgums without being caught by the
+ghosts. Eating a super-pacgum reverses the balance for a few seconds: the
+ghosts flee and can be eaten for bonus points.
+
+The game is built around three ideas:
+
+- **The maze is not ours.** Every level comes from the `mazegenerator`
+  package written by another team. Our loader adapts to their interface; we
+  never modify their code.
+- **Everything is configurable.** Maze size, pacgum count, speeds, level
+  duration and power-pellet duration are per-level entries in a JSON file, so
+  the game can be retuned without touching Python.
+- **The game engine knows nothing about the display.** `src/` holds the rules,
+  `src/ui/` holds Pygame. The dependency only ever goes one way.
+
+**Features**
+
+- Procedurally generated maze per level, with a fixed seed for level 1
+- Four ghosts, four targeting behaviours, plus dead and frightened states
+- Pacgums, super-pacgums, lives, score, per-level timer
+- Main menu, instructions, highscore board, pause menu, end-of-game screens
+- Persistent top-10 highscore board
+- Four colour themes and four window resolutions
+- Cheat menu for peer review
+- Keyboard and mouse navigation
+
+## Instructions
+
+**Requirements:** Python 3.10 or later, and [uv](https://docs.astral.sh/uv/).
+
+```bash
+make install
+make run
 ```
-src/
-├── __main__.py       point d'entrée (python -m src config.json)
-├── config_parser.py  schéma Pydantic de config.json
-├── game_builder.py   chargement config + construction d'un niveau
-├── game_setting.py   état d'un niveau (map, pacgums, spawns)
-├── tile.py           une case du labyrinthe (murs, contenu)
-├── characters.py     Pacman, Ghost et les cibles de chaque fantôme
-├── ghost_algo.py     BFS de pathfinding (le seul algo de déplacement)
-└── ui/
-    ├── app.py        machine à états, boucle principale, entrées
-    ├── draw.py       écrans de menu (texte)
-    ├── draw_maze.py  écran de jeu (labyrinthe, entités, sidebar)
-    ├── assets.py     chargement et cache des sprites
-    └── utils.py      types partagés (Theme, Rgb) + highscores JSON
+
+`make run` is equivalent to:
+
+```bash
+uv run python -m src config.json
 ```
 
-Le sens des dépendances est strict : `ui/` connaît le moteur, jamais l'inverse.
-`ghost_algo.py` ne dépend que de `tile.py`, ce qui le rend testable isolément.
+The program takes **exactly one argument**: the path to a JSON configuration
+file. Its name does not matter.
 
----
+**Controls**
 
-## L'algorithme des fantômes
-
-### Représentation du labyrinthe
-
-Les murs sont encodés en **bitmask** par case : `N=1, E=2, S=4, W=8`. `DELTAS`
-associe chaque bit à un vecteur `(dx, dy)`. Une case avec `walls_value = 15` est
-totalement fermée (case réservée, hors du labyrinthe jouable).
-
-Deux adaptateurs produisent la fonction `has_wall(x, y, direction)` que
-l'algorithme consomme — c'est ce qui le rend indépendant du reste du jeu :
-
-| Fonction | Source |
+| Key | Action |
 |---|---|
-| `wall_from_grid(maze_grid)` | grille brute du `MazeGenerator` |
-| `wall_from_tiles(tile_map)` | objets `Tile` du jeu (celui utilisé en pratique) |
+| Arrow keys | Move Pac-Man, navigate menus |
+| Enter | Confirm a menu entry |
+| Escape | Pause during a game, go back in a menu, quit from the main menu |
+| Mouse | Hover and click the main-menu entries |
 
-### Le parcours en largeur
+**Cheat menu.** Reachable from the main menu, and meant to make the peer
+review easy:
 
-Il n'y a **qu'un seul algorithme de pathfinding**, un BFS
-([ghost_algo.py:18](src/ghost_algo.py#L18)) :
+| Cheat | Effect |
+|---|---|
+| Invincibility | Ghosts cannot kill Pac-Man |
+| Infinite lives | The life counter never drops |
+| Edible ghosts | Ghosts are always edible |
+| Level skips | Value settable up to 42 *(not applied yet)* |
+| Point additions | Adds up to 9 999 points at the start of a game |
 
-1. File `deque` initialisée avec `start`, dict `came_from` qui sert à la fois de
-   marqueur « visité » et de chaîne de parents.
-2. Pour chaque case dépilée, on teste les 4 directions ; on ignore celles
-   bloquées par un mur, hors bornes, ou déjà visitées.
-3. Dès que `goal` est atteint on **s'arrête immédiatement** (pas d'exploration
-   complète) et on remonte la chaîne de parents.
-
-Le BFS garantit le plus court chemin en nombre de cases, le graphe n'étant pas
-pondéré. Complexité `O(W×H)` au pire, exécuté **une fois par fantôme et par pas
-de déplacement**.
-
-Deux variantes partagent le même corps :
-
-- `bfs_next_step` → `_first_step` remonte les parents jusqu'au nœud dont le
-  parent est `start` : retourne **une seule case**, celle où avancer. C'est
-  celle utilisée en jeu.
-- `bfs_path` → `_rebuild_path` retourne la **liste complète** des cases. Utile
-  pour du debug ou une visualisation, actuellement non appelée.
-
-Cas limites : `start == goal` renvoie `start` / `[start]` ; une cible
-inatteignable renvoie `None`, et le fantôme ne bouge pas ce tour-ci.
-
-### Les personnalités
-
-Le point clé du design : **l'algorithme est unique, seule la cible change**.
-Toute l'IA se joue dans `Ghost.get_target()`
-([characters.py:152](src/characters.py#L152)).
-
-| Fantôme | Couleur | Cible | Comportement |
-|---|---|---|---|
-| Blinky | `RED` | `(pacman.x, pacman.y)` | poursuite directe |
-| Pinky | `PINK` | pacman + `4 × direction`, clampé | embuscade devant |
-| Inky | `BLUE` | `2 × (pacman + 2×dir) − blinky` | vecteur doublé depuis Blinky |
-| Clyde | `ORANGE` | case aléatoire | erratique |
-
-Deux surcouches sont prioritaires sur la personnalité :
-
-- **Mort** (`is_dead`) → la cible devient son spawn. Le fantôme traverse le
-  labyrinthe sous forme d'yeux, et `move()` remet `is_dead = False` à l'arrivée
-  ([characters.py:201](src/characters.py#L201)).
-- **Frightened** (pacman invincible) → `get_frightened_target()` tire une case
-  au hasard et **la mémorise** dans `self.frightened_target` jusqu'à ce qu'elle
-  soit atteinte. C'est ce qui évite que le fantôme tremble sur place. Le champ
-  est remis à `None` dès que la peur cesse.
-
-`block()` clampe les coordonnées dans la grille : une cible hors map rendrait
-le BFS infructueux.
-
-`move()` sauvegarde `prev_x` / `prev_y` **avant** le pas — cette paire ne sert
-qu'à l'interpolation d'affichage.
-
----
-
-## La partie GUI
-
-Quatre modules, tous pilotés par **pygame**.
-
-### `app.py` — la classe `PacManApp`
-
-#### Machine à états
-
-`self.state` ∈ `menu | options | highscores | cheat | game | pause | enter_name`.
-Chaque état a son handler d'événements et sa branche de rendu. `ESCAPE` remonte
-d'un cran : jeu → pause, sous-écran → menu, menu → quitter.
-
-#### Boucle principale
-
-[app.py:669](src/ui/app.py#L669) :
-
-```
-dt = clock.tick(60) → process_events() → update_game(dt) → render()
-```
-
-Un `prev_state` détecte la sortie de l'état `game` pour couper le son de
-lancement.
-
-#### Découplage logique / affichage
-
-La logique du jeu est **strictement sur grille entière**, mais la boucle tourne
-à 60 FPS. Deux mécanismes réconcilient les deux.
-
-**Timers à accumulateur** ([app.py:581](src/ui/app.py#L581)) — pacman et
-fantômes ont chacun leur horloge :
-
-```python
-self.pacman_timer += dt
-while self.pacman_timer >= pacman_interval and self.state == "game":
-    self.pacman_timer -= pacman_interval
-    self.step_pacman()
-```
-
-Le `while` (et non `if`) rattrape les frames perdues ; le `-=` (et non `= 0`)
-évite la dérive. Les intervalles viennent de la config par niveau
-(`pacman_move_ms`, `ghost_move_ms`, `ghost_frightened_move_ms`) — **plus la
-valeur est grande, plus le personnage est lent**. `ghost_interval()` bascule sur
-l'intervalle « frightened » quand pacman est invincible, ce qui ralentit les
-fantômes en fuite.
-
-**Interpolation** — `move_progress()` retourne un ratio 0→1
-(`timer / intervalle`), transmis au rendu. `entity_pixels()`
-([draw_maze.py:93](src/ui/draw_maze.py#L93)) fait un lerp entre
-`(prev_x, prev_y)` et `(x, y)`. C'est pourquoi `back_to_spawn()` et `respawn()`
-recopient aussi `prev_*` : sinon le sprite glisserait à travers tout le
-labyrinthe jusqu'au spawn.
-
-#### Buffer d'entrées
-
-[app.py:316](src/ui/app.py#L316) — comportement du Pac-Man original : à l'appui
-d'une touche, si le virage est possible **immédiatement**, il est appliqué et le
-buffer vidé. Sinon la commande est stockée (**1 seule au maximum**) et retentée
-à chaque `step_pacman()` — pacman continue tout droit en attendant que le
-passage s'ouvre.
-
-#### Progression et scoring
-
-- `step_pacman()` : applique le buffer → déplace → ramasse le pacgum →
-  décrémente `game.pacgum` → collisions → si `pacgum <= 0`, `next_level()`.
-- Un super pacgum ne déclenche l'invincibilité que si `invincible_ms > 0`.
-  À 0, il ne rapporte que des points : c'est un réglage de difficulté par niveau.
-- `next_level()` reconstruit un labyrinthe neuf via `build_level()` en
-  **conservant score et vies** ; la graine dérive du numéro de niveau, donc
-  chaque niveau a son propre labyrinthe reproductible.
-- `resolve_collisions()` est appelée **deux fois par tour** (après le pas de
-  pacman *et* après celui des fantômes) : sans ça, un croisement pourrait passer
-  inaperçu.
-- Timer de niveau : `level_max_time` est décompté ; à zéro, `lose_life()`.
-- `lose_life()` remet pacman et tous les fantômes au spawn et **remet les timers
-  à zéro**, pour ne pas se faire retoucher instantanément.
-
-#### L'invariant « une partie est en cours »
-
-`self._game` vaut `None` tant que `start_game()` n'a pas été appelé. L'accès
-passe par une propriété qui porte l'invariant une fois pour toutes
-([app.py:173](src/ui/app.py#L173)) :
-
-```python
-@property
-def game(self) -> GameSetting:
-    assert self._game is not None, "aucune partie en cours"
-    return self._game
-```
-
-Tout le code de jeu écrit `self.game.pacman` sans se poser la question.
-`has_game()` sert au seul endroit qui doit vraiment tester l'absence de partie :
-le garde-fou de la boucle principale.
-
-#### Cheats
-
-Cinq entrées : trois booléens (`Invincibility`, `Infinite lives`,
-`Edible ghosts`) et deux valeurs numériques. `update_cheat()` gère la
-**répétition de touche** (maintenir ←/→ fait défiler toutes les 120 ms) et
-`handle_cheat_input_event()` une saisie numérique au clavier, avec limite de
-chiffres.
-
-#### Thèmes et résolutions
-
-Quatre thèmes (`Classic`, `Ocean`, `Sunset`, `Mono`) définis comme des
-`Theme` (`TypedDict`), cyclés depuis le menu Options. Quatre résolutions de
-1024×768 à 1920×1080 ; le labyrinthe s'adapte tout seul, voir `compute_layout`.
-
-#### Souris
-
-`draw_menu()` **retourne les rects** de ses options, stockés dans
-`self.menu_item_rects`. `MOUSEMOTION` met à jour `menu_index` au survol,
-`MOUSEBUTTONDOWN` rejoue l'action clavier correspondante. Uniquement sur le
-menu principal : les autres écrans restent au clavier.
-
-#### Son
-
-`start.wav` est chargé au démarrage dans un `try / except` — le jeu ne plante
-pas si le fichier manque. Il est joué dans `start_game()` et stoppé à la sortie
-de l'état `game`.
-
-### `draw_maze.py` — l'écran de jeu
-
-**`compute_layout()`** calcule la plus grande tuile carrée qui rentre dans
-`fenêtre − sidebar − marges`, avec un plancher à 8 px, puis centre le
-labyrinthe. C'est le cœur de l'adaptation à la résolution.
-
-**`draw_maze()`** dessine les murs **segment par segment** en lisant les 4
-booléens de chaque `Tile`, avec des cercles aux extrémités pour combler les
-jointures (`cap_radius`). L'épaisseur est proportionnelle à la tuile
-(`tile // 8`). Les pacgums sont des cercles centrés : `tile // 9` pour un
-normal, `tile // 4` pour un super.
-
-**`draw_entities()`** dérive sa frame d'animation de l'horloge globale
-(`get_ticks() // 120 % 3`), donc indépendamment du FPS. Pour chaque entité :
-position interpolée, puis sprite. Les fantômes ont trois apparences
-(normal / frightened / yeux) et **chaque branche a un repli en cercle coloré**
-si le sprite manque.
-
-**Sidebar** : quatre cadres empilés (SCORE / LIVES / LEVEL / TIME) dessinés par
-le helper `draw_box()`, qui retourne le point d'ancrage du contenu. Les vies
-sont des cœurs vectoriels (2 cercles + 1 triangle), rouges si restantes, gris
-sinon. Le timer passe en rouge sous 10 secondes.
-
-### `draw.py` — les écrans texte
-
-Six fonctions (`draw_menu`, `draw_options`, `draw_highscores`, `draw_cheat`,
-`draw_enter_name`, `draw_pause`) bâties sur le même patron : titre en
-`title_font` centré à y=100, puis items espacés de 100 px, l'item sélectionné
-dans la couleur `highlight`.
-
-Le curseur (`draw_cursor`) est un **sprite de pacman animé** placé 50 px à
-gauche de l'item, pas un simple triangle.
-
-### `assets.py` — les sprites
-
-Cache `dict` indexé par `(chemin, taille)` : chaque image n'est lue et
-redimensionnée **qu'une fois par taille**. `_load` retourne `None` en cas
-d'échec plutôt que de lever, d'où les replis côté dessin. Pacman a un dossier
-par direction × 3 frames ; la direction `(0, 0)` au spawn affiche par défaut le
-sprite orienté à droite.
-
-### `utils.py` — types partagés et highscores
-
-Définit `Rgb`, le `TypedDict` `Theme` et `Highscore`, utilisés par les trois
-autres modules d'UI. `load_highscores` lit le JSON et le trie par score
-décroissant (liste vide si le fichier est absent) ; `save_highscores`
-relit-ajoute-réécrit.
-
-### Flux complet d'une frame
-
-```
-clock.tick(60) → dt
-  ↓
-process_events()          clavier / souris → state, direction, buffer
-  ↓
-update_game(dt)           timer d'invincibilité, timer de niveau
-  ├─ while pacman_timer   → step_pacman()  : buffer, move, pacgum, collisions
-  └─ while ghost_timer    → step_ghosts()  : get_target() → BFS → 1 case
-  ↓
-render()                  layout → murs → entités interpolées → sidebar → flip
-```
-
----
+Toggles are switched with Enter; numeric values are adjusted by holding the
+left and right arrows, or typed directly after pressing Enter.
 
 ## Configuration
 
-`config.json` est validé par Pydantic ([config_parser.py](src/config_parser.py)).
-`level` est une **table de difficulté, une entrée par niveau** ; la dernière
-entrée se répète indéfiniment au-delà.
+`config.json` is validated by Pydantic in
+[config_parser.py](src/config_parser.py). Blank lines and lines starting with
+`#` are treated as comments and stripped before parsing.
 
-| Champ | Effet |
+`level` is a **difficulty table with one entry per level**. Completing the last
+entry wins the game.
+
+| Key | Meaning | Default |
+|---|---|---|
+| `highscore_filename` | Path of the highscore file | `highscore.json` |
+| `lives` | Starting lives | `1` |
+| `points_per_pacgum` | Score for a pacgum | `1` |
+| `points_per_super_pacgum` | Score for a super-pacgum | `1` |
+| `points_per_ghost` | Score for an edible ghost | `1` |
+| `seed` | Base seed; level *n* uses `seed + n * 1000` | `42` |
+
+Per level, inside `level`:
+
+| Key | Meaning | Default |
+|---|---|---|
+| `width`, `height` | Maze size, must be greater than 9 | `10` |
+| `pacgum` | Number of pacgums to scatter | `10` |
+| `level_max_time` | Seconds before a life is lost | `90` |
+| `pacman_move_ms` | Delay between two Pac-Man steps — **higher is slower** | `200` |
+| `ghost_move_ms` | Same, for ghosts | `260` |
+| `ghost_frightened_move_ms` | Same, while ghosts are fleeing | `380` |
+| `invincible_ms` | Duration of the frightened state; `0` disables it for that level | `6000` |
+
+**Faulty configuration.** The game never stops on a questionable file. Any
+value that is out of range, of the wrong type, or missing is replaced by the
+model's default, a clear message is printed, and the game continues. Unknown
+keys are ignored. The configuration is read and repaired **before** the window
+opens, so a broken file is reported in the terminal rather than killing a game
+already in progress:
+
+```
+$ make run
+Warning: config field 'level.0.width' is invalid (Input should be greater than 9), using default 10
+Warning: config field 'lives' is invalid (Input should be greater than 0), using default 1
+```
+
+Only an unreadable file or malformed JSON stops the program, with a clear
+message and no traceback.
+
+## Highscore
+
+Highscores are stored as a JSON array in the file named by
+`highscore_filename`, next to the project. The implementation is in
+[utils.py](src/ui/utils.py).
+
+**Why a plain JSON file.** Ten records need no database. A text file is
+readable and editable by the reviewer, needs no extra dependency, and can be
+deleted to test the empty-board case in one command.
+
+**How it works.**
+
+- The board is loaded at start-up and after every save.
+- On read, malformed entries — missing key, wrong type, negative score — are
+  filtered out rather than raising, and a missing or corrupt file yields an
+  empty board.
+- The board is always sorted by descending score and capped at 10 entries.
+- On write, the new score is first compared to the **worst** kept score. If the
+  board is full and the score does not beat it, the file is not rewritten at
+  all. Otherwise the insertion point is found by walking up from the end, the
+  entry is inserted, and the list is truncated back to 10.
+- Names are limited to 10 characters.
+- The player enters a name at the end of every game, whether they won or lost.
+
+## Maze Generation
+
+We do not generate mazes ourselves. Each level is produced by the
+**A-Maze-ing** package assigned to us by another team, used as-is.
+
+The package is shipped as a wheel in [vendor/](vendor/) and declared as a
+regular dependency, so nothing in our sources can shadow or alter it:
+
+```toml
+[tool.uv.sources]
+mazegenerator = { path = "vendor/mazegenerator-2.0.2-py3-none-any.whl" }
+```
+
+To reinstall it from another copy of the wheel during the review:
+
+```bash
+uv pip install --force-reinstall --no-deps <path-to-your-wheel>
+```
+
+**How we use it.** [game_builder.py](src/game_builder.py) calls
+`MazeGenerator(size=(width, height), seed=seed)` and reads its `.maze`
+property. That is the whole surface we depend on — no private attribute, no
+subclassing. `PERFECT` is left at its default of `False`, which produces the
+looping corridors Pac-Man needs instead of a perfect maze with dead ends.
+
+The generator returns a grid of integers where each cell encodes its four
+walls as a bitmask (N=1, E=2, S=4, W=8). We keep that encoding as-is in our
+`Tile` objects, so no conversion layer is needed.
+
+Level 1 always uses the same seed, so it is reproducible for the reviewer;
+level *n* uses `seed + n * 1000` so every level gets its own maze. If the
+generator fails, the error is caught and reported without a traceback.
+
+## Implementation
+
+**Tile-based logic, interpolated rendering.** The engine moves entities one
+grid cell at a time on their own timers. The renderer interpolates between the
+previous and the current cell so movement looks smooth at 60 FPS. Collisions
+and pathfinding stay exact integer comparisons, with no floating-point edge
+cases.
+
+**Fixed 60 FPS loop with accumulators.** Pac-Man and the ghosts each have their
+own timer, fed by the frame delta and drained by whole steps. Ghosts slow down
+further while they are fleeing.
+
+**Input buffering.** One pending direction is stored. If the turn is possible
+right away it is applied immediately; otherwise Pac-Man keeps going straight
+and the turn fires as soon as the corridor opens. This is what makes cornering
+feel right.
+
+**A shared base for every character.** `Pacman` and `Ghost` both inherit from
+`Entity`, which owns the position, the spawn cell, the previous cell used for
+interpolation, and the "do not cross walls" rule. Ghosts apply the step chosen
+by the BFS through that same inherited `move_to_next`, so no character can
+walk through a wall.
+
+**One pathfinding algorithm.** All four ghosts run the same BFS in
+[ghost_algo.py](src/ghost_algo.py). BFS is optimal on an unweighted grid, and
+having a single implementation means a single place to debug.
+
+**Personality through target selection only.** Each ghost picks a different
+target cell in `Ghost.get_target()`:
+
+| Ghost | Target |
 |---|---|
-| `width`, `height` | taille du labyrinthe (> 9) |
-| `pacgum` | nombre de pacgums à semer |
-| `level_max_time` | secondes avant de perdre une vie |
-| `pacman_move_ms` | délai entre deux pas de pacman (plus grand = plus lent) |
-| `ghost_move_ms` | idem pour les fantômes |
-| `ghost_frightened_move_ms` | idem quand ils fuient |
-| `invincible_ms` | durée du mode fright ; `0` = désactivé à ce niveau |
+| Blinky | Pac-Man's current cell |
+| Pinky | Four cells ahead of Pac-Man's direction |
+| Inky | The Blinky→Pac-Man vector, doubled |
+| Clyde | A random cell |
 
-Le fichier tolère les lignes vides et les commentaires `#`, retirés avant le
-parsing par `load_json`.
+Two states override the personality: a dead ghost targets its spawn and
+returns as eyes; a frightened ghost memorises one random target so it does not
+jitter between two cells.
 
----
+**Adaptive layout.** `compute_layout()` computes the largest square tile that
+fits the window while preserving the maze aspect ratio, so every resolution
+works without a separate asset set.
 
-## Points connus et pistes d'amélioration
+## General Software Architecture
 
-**Clyde ne mémorise pas sa cible**, contrairement au mode frightened : il tire
-une case aléatoire à chaque pas, donc il oscille au lieu d'errer proprement. Le
-Clyde original vise pacman au-delà de 8 cases de distance (Manhattan) et son
-coin de scatter en deçà.
+```
+src/
+├── __main__.py         entry point (python -m src config.json)
+├── config_parser.py    Pydantic models: GameConfig, LevelConfig
+├── game_builder.py     JSON loading, config repair, level construction
+├── game_setting.py     mutable state of a level: map, entities, score, lives
+├── tile.py             one maze cell: walls bitmask, type, content
+├── characters.py       Entity base, Pacman, Ghost, and ghost targeting
+├── ghost_algo.py       BFS pathfinding — the only one in the project
+└── ui/
+    ├── app.py          PacManApp: state machine, game loop, input
+    ├── draw_maze.py    game screen: walls, entities, HUD sidebar
+    ├── draw.py         text screens: menu, instructions, scores, pause, end
+    ├── assets.py       sprite loading and caching
+    └── utils.py        shared types (Theme, Rgb) and highscore persistence
+```
 
-**`Ghost.run_to_spawn()` est du code mort** : les coins de scatter sont
-calculés mais la fonction n'est jamais appelée.
+**The dependency rule.** `src/ui/` imports from `src/`. `src/` never imports
+from `src/ui/`. The game rules can therefore be exercised without opening a
+window, which is how the acceptance tests are run headless.
 
-**Le mode frightened vise des cases aléatoires**, pas les coins, malgré ce que
-suggère le commentaire dans `get_target`.
+**Data flow of one frame.** `PacManApp.run()` ticks the clock, drains the
+Pygame event queue into the state machine, advances the engine by whole steps
+when the accumulators allow it, then renders the current state. The renderer
+only reads engine state; it never mutates it.
 
-**`draw_pause` et `draw_enter_name` n'acceptent pas le thème** et utilisent des
-couleurs codées en dur : ces deux écrans ne suivent pas le changement de
-palette.
+**State machine.** `menu`, `options` (instructions), `highscores`, `cheat`,
+`game`, `pause`, `enter_name`. Every screen is one branch in `process_events()`
+and one branch in `render()`.
 
-**Le paramètre `height` des fonctions de `draw.py`** reçoit en réalité la
-*largeur* (`center_ref`). L'usage est cohérent (`height // 2` donne bien le
-centre horizontal) mais le nom induit en erreur.
+## Project Management
 
-**Dans `get_target`, la branche `BLUE`** réutilise les variables
-`pacman_direc_x` / `pac_direc_x` pour stocker des coordonnées : le calcul est
-juste, mais le nommage brouille la lecture.
+The full project-management record — timeline, team organisation, technical
+choices, risk register, acceptance test plan and progress tracking — is in
+**[project-management/](project-management/)**.
+
+## Packaging
+
+The build script and its PyInstaller spec are at the root of the repository.
+See [PACKAGING.md](PACKAGING.md) for building a standalone executable and
+publishing it to itch.io.
+
+```bash
+make package
+```
+
+## Resources
+
+**Documentation**
+
+- [Pygame documentation](https://www.pygame.org/docs/)
+- [Pydantic documentation](https://docs.pydantic.dev/)
+- [uv documentation](https://docs.astral.sh/uv/)
+- [PEP 257 — Docstring conventions](https://peps.python.org/pep-0257/)
+- [PyInstaller manual](https://pyinstaller.org/en/stable/)
+
+**On Pac-Man**
+
+- [The Pac-Man Dossier](https://pacman.holenet.info/) — reference description
+  of the original ghost behaviours and their targeting rules
+- [Breadth-first search](https://en.wikipedia.org/wiki/Breadth-first_search)
+
+**Use of AI**
+
+AI assistants were used on this project for the following, and every generated
+suggestion was reviewed and rewritten before being kept:
+
+- **Ghost targeting.** An assistant was asked for an example of how four
+  different behaviours could share a single pathfinding routine. The result was
+  used as a starting point for the shape of `Ghost.get_target()`; a trace of
+  that exchange is still visible as a comment in
+  [ghost_algo.py](src/ghost_algo.py). The BFS implementation itself is ours.
+- **Documentation.** Drafting this README and the project-management documents
+  from the Git history and the source.
+- **Ghosts Algorithms.** To look the real movement of the differents intities.

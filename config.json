@@ -1,6 +1,10 @@
 {
+	# Fichier de classement, relatif a la racine du projet.
 	"highscore_filename": "highscore.json",
 
+	# Table de difficulte : une entree par niveau, 10 niveaux.
+	# Terminer le dernier niveau gagne la partie.
+	# Pour les vitesses, plus la valeur est GRANDE, plus c'est LENT.
 	"level": [
 		{"width": 20, "height": 20, "pacgum": 42, "level_max_time": 90,
 		 "pacman_move_ms": 200, "ghost_move_ms": 300, "ghost_frightened_move_ms": 420, "invincible_ms": 7000},
@@ -18,7 +22,21 @@
 		 "pacman_move_ms": 170, "ghost_move_ms": 200, "ghost_frightened_move_ms": 320, "invincible_ms": 3000},
 
 		{"width": 30, "height": 30, "pacgum": 120, "level_max_time": 70,
-		 "pacman_move_ms": 165, "ghost_move_ms": 180, "ghost_frightened_move_ms": 300, "invincible_ms": 0}
+		 "pacman_move_ms": 165, "ghost_move_ms": 190, "ghost_frightened_move_ms": 310, "invincible_ms": 2500},
+
+		{"width": 32, "height": 32, "pacgum": 140, "level_max_time": 65,
+		 "pacman_move_ms": 160, "ghost_move_ms": 180, "ghost_frightened_move_ms": 300, "invincible_ms": 2000},
+
+		{"width": 34, "height": 34, "pacgum": 160, "level_max_time": 60,
+		 "pacman_move_ms": 155, "ghost_move_ms": 172, "ghost_frightened_move_ms": 290, "invincible_ms": 1500},
+
+		{"width": 36, "height": 36, "pacgum": 180, "level_max_time": 55,
+		 "pacman_move_ms": 150, "ghost_move_ms": 165, "ghost_frightened_move_ms": 280, "invincible_ms": 1000},
+
+		# Dernier niveau : invincible_ms a 0, le super pacgum ne rapporte plus
+		# que des points, les fantomes ne fuient plus.
+		{"width": 38, "height": 38, "pacgum": 200, "level_max_time": 50,
+		 "pacman_move_ms": 145, "ghost_move_ms": 160, "ghost_frightened_move_ms": 270, "invincible_ms": 0}
 	],
 
 	"lives": 3,
@@ -27,5 +45,6 @@
 	"points_per_super_pacgum": 50,
 	"points_per_ghost": 200,
 
+	# Graine du niveau 1 ; le niveau n utilise seed + n * 1000.
 	"seed": 42
 }
